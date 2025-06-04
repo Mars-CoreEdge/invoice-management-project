@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useChat } from 'ai/react'
 import { Button } from './ui/button'
 
@@ -36,6 +37,14 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
       console.error('Chat error:', error);
     }
   })
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    const messagesContainer = document.querySelector('#messages-container')
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight
+    }
+  }, [messages, isLoading])
 
   const setQuickInput = async (text: string) => {
     // Don't set quick input if already loading
@@ -96,12 +105,12 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl h-full flex flex-col border border-white/20 relative overflow-hidden">
+    <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl h-full flex flex-col border border-white/20 relative overflow-hidden max-h-[calc(100vh-8rem)]">
       {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-3xl"></div>
       
       {/* Header */}
-      <div className="p-4 sm:p-6 border-b border-white/10 relative z-10">
+      <div className="p-4 sm:p-6 border-b border-white/10 relative z-10 flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-0 gap-3 sm:gap-0">
           <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2 sm:gap-3">
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
@@ -137,7 +146,16 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-3 sm:space-y-4 relative z-10">
+      <div 
+        id="messages-container" 
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 relative z-10 min-h-0 scroll-smooth
+                   scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-purple-500/50 
+                   hover:scrollbar-thumb-purple-500/70 scrollbar-track-rounded-full scrollbar-thumb-rounded-full"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(147, 51, 234, 0.5) rgba(255, 255, 255, 0.05)'
+        }}
+      >
         {messages.map((message) => (
           <div
             key={message.id}
@@ -207,7 +225,7 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
       </div>
 
       {/* Input Form */}
-      <div className="p-3 sm:p-4 lg:p-6 border-t border-white/10 relative z-10">
+      <div className="p-3 sm:p-4 lg:p-6 border-t border-white/10 relative z-10 flex-shrink-0">
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <div className="relative">
             <textarea

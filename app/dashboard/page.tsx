@@ -11,7 +11,6 @@ export default function Dashboard() {
   const [isQuickBooksConnected, setIsQuickBooksConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
-  const [isDemoMode, setIsDemoMode] = useState(false)
 
   useEffect(() => {
     // Check URL params for OAuth callback status
@@ -22,7 +21,6 @@ export default function Dashboard() {
 
     if (connected === 'true') {
       setIsQuickBooksConnected(true)
-      setIsDemoMode(false)
       // Clean URL
       window.history.replaceState({}, '', '/dashboard')
     }
@@ -31,12 +29,7 @@ export default function Dashboard() {
       let errorMessage = 'Failed to connect to QuickBooks. Please try again.'
       
       if (error === 'auth_declined') {
-        // User declined authorization - this is not an error, just show demo mode option
-        setIsQuickBooksConnected(false)
-        setConnectionError(null)
-        // Clean URL and don't show error
-        window.history.replaceState({}, '', '/dashboard')
-        return
+        errorMessage = 'QuickBooks authorization was declined. Please try connecting again to access your invoice data.'
       } else if (error === 'config_missing') {
         errorMessage = message ? decodeURIComponent(message) : 'Configuration error: Missing environment variables.'
       } else if (error === 'oauth_failed') {
@@ -53,12 +46,6 @@ export default function Dashboard() {
 
   const handleQuickBooksConnect = () => {
     window.location.href = '/api/auth/quickbooks'
-  }
-
-  const handleDemoMode = () => {
-    setIsQuickBooksConnected(true)
-    setIsDemoMode(true)
-    setConnectionError(null)
   }
 
   const handleInvoiceSelect = (invoice: any) => {
@@ -141,7 +128,7 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
 
                 <button 
                   onClick={handleQuickBooksConnect}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-2xl text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0 group mb-4"
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-2xl text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0 group"
                   disabled={connectionError?.includes('environment variable')}
                 >
                   {connectionError?.includes('environment variable') ? (
@@ -155,15 +142,6 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
                       Connect QuickBooks Online
                     </>
                   )}
-                </button>
-
-                {/* Demo Mode Button */}
-                <button 
-                  onClick={handleDemoMode}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-2xl text-base sm:text-lg transition-all duration-300 border border-white/30 hover:border-white/50 group"
-                >
-                  <span className="mr-3">🎯</span>
-                  Continue with Demo Data
                 </button>
 
                 <p className="text-purple-300 text-xs sm:text-sm mt-4 sm:mt-6 flex items-center justify-center gap-2">
@@ -190,36 +168,20 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
       <Header isConnected={isQuickBooksConnected} />
       
       {/* Success notification */}
-      <div className={`backdrop-blur-sm border-l-4 p-3 sm:p-4 mb-3 sm:mb-4 mx-3 sm:mx-4 rounded-r-xl relative z-10 ${
-        isDemoMode 
-          ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-400'
-          : 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 border-emerald-400'
-      }`}>
+      <div className="bg-gradient-to-r from-emerald-500/20 to-green-500/20 backdrop-blur-sm border-l-4 border-emerald-400 p-3 sm:p-4 mb-3 sm:mb-4 mx-3 sm:mx-4 rounded-r-xl relative z-10">
         <div className="flex items-center">
-          {isDemoMode ? (
-            <>
-              <span className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 mr-2 sm:mr-3 animate-bounce">🎯</span>
-              <p className="text-blue-100 font-semibold text-sm sm:text-base">
-                Running in Demo Mode - Explore with sample data!
-              </p>
-              <span className="ml-2 text-blue-400">📊</span>
-            </>
-          ) : (
-            <>
-              <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 mr-2 sm:mr-3 animate-bounce" />
-              <p className="text-emerald-100 font-semibold text-sm sm:text-base">
-                ✨ Successfully connected to QuickBooks Online!
-              </p>
-              <span className="ml-2 text-emerald-400">📈</span>
-            </>
-          )}
+          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 mr-2 sm:mr-3 animate-bounce" />
+          <p className="text-emerald-100 font-semibold text-sm sm:text-base">
+            ✨ Successfully connected to QuickBooks Online!
+          </p>
+          <span className="ml-2 text-emerald-400">📈</span>
         </div>
       </div>
-
+      
       {/* Main responsive layout - stacks vertically on mobile, side-by-side on larger screens */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 p-3 sm:p-6 relative z-10">
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 p-3 sm:p-6 relative z-10 min-h-0">
         {/* Invoice Panel - full width on mobile, half width on desktop */}
-        <div className="w-full lg:w-1/2 min-h-[50vh] lg:min-h-0">
+        <div className="w-full lg:w-1/2 h-[calc(100vh-16rem)] lg:h-auto lg:flex-1">
           <InvoicePanel 
             selectedInvoice={selectedInvoice}
             onInvoiceSelect={handleInvoiceSelect}
@@ -227,7 +189,7 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
         </div>
 
         {/* AI Chat Panel - full width on mobile, half width on desktop */}
-        <div className="w-full lg:w-1/2 min-h-[50vh] lg:min-h-0">
+        <div className="w-full lg:w-1/2 h-[calc(100vh-16rem)] lg:h-auto lg:flex-1">
           <ChatPanel 
             selectedInvoice={selectedInvoice}
             onInvoiceSelect={handleInvoiceSelect}

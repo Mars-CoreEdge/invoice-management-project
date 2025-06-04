@@ -63,12 +63,12 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl h-full flex flex-col border border-white/20 relative overflow-hidden">
+    <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl h-full flex flex-col border border-white/20 relative overflow-hidden max-h-[calc(100vh-8rem)]">
       {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-3xl"></div>
       
       {/* Header */}
-      <div className="p-4 sm:p-6 border-b border-white/10 relative z-10">
+      <div className="p-4 sm:p-6 border-b border-white/10 relative z-10 flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
           <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2 sm:gap-3">
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
@@ -126,7 +126,15 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
       </div>
       
       {/* Invoice List */}
-      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-3 sm:space-y-4 relative z-10">
+      <div 
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 relative z-10 min-h-0 scroll-smooth
+                   scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-blue-500/50 
+                   hover:scrollbar-thumb-blue-500/70 scrollbar-track-rounded-full scrollbar-thumb-rounded-full"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(59, 130, 246, 0.5) rgba(255, 255, 255, 0.05)'
+        }}
+      >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-32">
             <div className="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-2 border-purple-500 border-t-transparent rounded-full mb-3 sm:mb-4"></div>
@@ -200,7 +208,7 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
       </div>
 
       {/* Upcoming & Insights Footer */}
-      <div className="p-4 sm:p-6 border-t border-white/10 bg-white/5 backdrop-blur-sm relative z-10">
+      <div className="p-4 sm:p-6 border-t border-white/10 bg-white/5 backdrop-blur-sm relative z-10 flex-shrink-0">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           
           {/* Upcoming Due Dates */}
