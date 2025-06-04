@@ -199,23 +199,102 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
         )}
       </div>
 
-      {/* Summary Footer */}
+      {/* Upcoming & Insights Footer */}
       <div className="p-4 sm:p-6 border-t border-white/10 bg-white/5 backdrop-blur-sm relative z-10">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-          <div className="text-center">
-            <div className="text-base sm:text-lg font-bold text-white">
-              {formatCurrency(stats.totalRevenue)}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          
+          {/* Upcoming Due Dates */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"></div>
+              <h3 className="text-white font-semibold text-sm">Upcoming Due Dates</h3>
             </div>
-            <div className="text-white/60 text-xs sm:text-sm">Total Value</div>
+            
+            <div className="space-y-2">
+              {mockInvoices
+                .filter(invoice => invoice.balance > 0)
+                .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+                .slice(0, 2)
+                .map((invoice) => {
+                  const daysUntilDue = Math.ceil((new Date(invoice.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                  const isOverdue = daysUntilDue < 0;
+                  const isUrgent = daysUntilDue <= 7 && daysUntilDue >= 0;
+                  
+                  return (
+                    <div 
+                      key={invoice.id} 
+                      className={`p-3 rounded-lg border text-xs ${
+                        isOverdue 
+                          ? 'bg-red-500/10 border-red-400/30' 
+                          : isUrgent 
+                            ? 'bg-amber-500/10 border-amber-400/30' 
+                            : 'bg-white/5 border-white/20'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-white truncate">{invoice.docNumber}</div>
+                          <div className="text-white/70 truncate">{invoice.customer}</div>
+                        </div>
+                        <div className="text-right ml-2">
+                          <div className={`font-medium ${
+                            isOverdue ? 'text-red-300' : isUrgent ? 'text-amber-300' : 'text-white'
+                          }`}>
+                            {formatCurrency(invoice.balance)}
+                          </div>
+                          <div className={`text-xs ${
+                            isOverdue ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-white/60'
+                          }`}>
+                            {isOverdue ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days left`}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
-          <div className="text-center">
-            <div className="text-base sm:text-lg font-bold text-emerald-400">{stats.paidCount}</div>
-            <div className="text-white/60 text-xs sm:text-sm">Paid</div>
+
+          {/* Quick Insights */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+              <h3 className="text-white font-semibold text-sm">Quick Insights</h3>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="p-3 bg-white/5 rounded-lg border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⚡</span>
+                    <span className="text-white text-xs">Average Collection</span>
+                  </div>
+                  <span className="text-white font-medium text-xs">15 days</span>
+                </div>
+              </div>
+              
+              <div className="p-3 bg-white/5 rounded-lg border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">💰</span>
+                    <span className="text-white text-xs">Collection Rate</span>
+                  </div>
+                  <span className="text-emerald-400 font-medium text-xs">75%</span>
+                </div>
+              </div>
+              
+              <div className="p-3 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-400/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🎯</span>
+                    <span className="text-purple-200 text-xs">Next Action</span>
+                  </div>
+                  <span className="text-purple-300 font-medium text-xs">Follow up</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-center col-span-2 sm:col-span-1">
-            <div className="text-base sm:text-lg font-bold text-amber-400">{stats.unpaidCount}</div>
-            <div className="text-white/60 text-xs sm:text-sm">Unpaid</div>
-          </div>
+          
         </div>
       </div>
     </div>
