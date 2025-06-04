@@ -1,67 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { formatCurrency, formatDate } from '@/lib/utils'
-
-interface Invoice {
-  id: string
-  docNumber: string
-  txnDate: string
-  dueDate: string
-  totalAmount: number
-  balance: number
-  customer: string
-  status: 'paid' | 'unpaid' | 'overdue'
-}
+import { mockInvoices, getInvoiceStats, formatCurrency, type Invoice } from '../lib/mock-data'
 
 interface InvoicePanelProps {
   selectedInvoice: Invoice | null
   onInvoiceSelect: (invoice: Invoice) => void
 }
-
-// Hardcoded mock invoices for demonstration
-const mockInvoices: Invoice[] = [
-  {
-    id: '1',
-    docNumber: 'INV-1001',
-    txnDate: '2024-01-15',
-    dueDate: '2024-02-14',
-    totalAmount: 2500.00,
-    balance: 0,
-    customer: 'Acme Corporation',
-    status: 'paid'
-  },
-  {
-    id: '2',
-    docNumber: 'INV-1002',
-    txnDate: '2024-01-20',
-    dueDate: '2024-02-19',
-    totalAmount: 1800.50,
-    balance: 1800.50,
-    customer: 'TechStart Inc.',
-    status: 'unpaid'
-  },
-  {
-    id: '3',
-    docNumber: 'INV-1003',
-    txnDate: '2024-01-10',
-    dueDate: '2024-02-09',
-    totalAmount: 3200.75,
-    balance: 3200.75,
-    customer: 'Global Dynamics',
-    status: 'overdue'
-  },
-  {
-    id: '4',
-    docNumber: 'INV-1004',
-    txnDate: '2024-01-25',
-    dueDate: '2024-02-24',
-    totalAmount: 950.00,
-    balance: 0,
-    customer: 'Sunrise Solutions',
-    status: 'paid'
-  }
-]
 
 export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -110,10 +55,8 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
   // Limit to 4 invoices for display
   const displayInvoices = filteredInvoices.slice(0, 4)
 
-  // Calculate summary statistics from all 4 mock invoices (not filtered)
-  const totalAmount = mockInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0)
-  const paidCount = mockInvoices.filter(invoice => invoice.balance === 0).length
-  const unpaidCount = mockInvoices.filter(invoice => invoice.balance > 0).length
+  // Get invoice statistics from shared function
+  const stats = getInvoiceStats()
 
   const handleRefresh = () => {
     loadMockInvoices()
@@ -125,51 +68,51 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-3xl"></div>
       
       {/* Header */}
-      <div className="p-6 border-b border-white/10 relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <span className="text-sm">📄</span>
+      <div className="p-4 sm:p-6 border-b border-white/10 relative z-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2 sm:gap-3">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+              <span className="text-xs sm:text-sm">📄</span>
             </div>
             Invoices
           </h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/20 transition-all disabled:opacity-50"
+              className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-2 text-xs sm:text-sm text-white/80 hover:bg-white/20 transition-all disabled:opacity-50 flex-1 sm:flex-none"
               title="Refresh invoices"
             >
               {loading ? '⏳' : '🔄'}
             </button>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 text-sm text-white/80">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-2 text-xs sm:text-sm text-white/80 flex-1 sm:flex-none text-center sm:text-left">
               {displayInvoices.length} of 4 invoices
             </div>
           </div>
         </div>
         
         {/* Search and Filter Controls */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Search */}
           <div className="relative">
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60">🔍</div>
+            <div className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-white/60">🔍</div>
             <input
               type="text"
               placeholder="Search invoices or customers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+              className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-sm sm:text-base text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
             />
           </div>
           
           {/* Filter Buttons */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-2">
             {(['all', 'paid', 'unpaid', 'overdue'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
                 disabled={loading}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
                   filterStatus === status 
                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
                     : 'bg-white/10 text-white/80 hover:bg-white/20'
@@ -183,19 +126,19 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
       </div>
       
       {/* Invoice List */}
-      <div className="flex-1 overflow-auto p-6 space-y-4 relative z-10">
+      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-3 sm:space-y-4 relative z-10">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-32">
-            <div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mb-4"></div>
-            <p className="text-white/80">Loading invoices...</p>
+            <div className="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-2 border-purple-500 border-t-transparent rounded-full mb-3 sm:mb-4"></div>
+            <p className="text-white/80 text-sm sm:text-base">Loading invoices...</p>
           </div>
         ) : displayInvoices.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">📄</span>
+          <div className="text-center py-8 sm:py-12">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <span className="text-xl sm:text-2xl">📄</span>
             </div>
-            <p className="text-white/80 text-lg">No invoices found</p>
-            <p className="text-white/60 text-sm mt-2">
+            <p className="text-white/80 text-base sm:text-lg">No invoices found</p>
+            <p className="text-white/60 text-xs sm:text-sm mt-2">
               Try adjusting your search or filters
             </p>
           </div>
@@ -204,108 +147,77 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
             <div
               key={invoice.id}
               onClick={() => onInvoiceSelect(invoice)}
-              className={`group cursor-pointer bg-white/5 backdrop-blur-sm rounded-2xl p-6 border transition-all duration-300 hover:bg-white/10 hover:shadow-xl hover:scale-[1.02] ${
+              className={`bg-white/5 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:shadow-lg hover:bg-white/10 ${
                 selectedInvoice?.id === invoice.id 
-                  ? 'border-purple-500/50 bg-purple-500/10 shadow-lg' 
-                  : 'border-white/10 hover:border-white/20'
+                  ? 'border-purple-400/50 bg-purple-500/10 shadow-lg ring-2 ring-purple-400/30' 
+                  : 'border-white/20 hover:border-white/30'
               }`}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                    <span className="text-white font-bold">{invoice.docNumber.slice(-2)}</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-xs sm:text-sm">
+                      {invoice.docNumber.split('-')[1]}
+                    </span>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-white text-lg">{invoice.docNumber}</h3>
-                    <p className="text-white/70 flex items-center gap-2">
-                      👤 {invoice.customer}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                      <h3 className="font-semibold text-white text-sm sm:text-base truncate">
+                        {invoice.docNumber}
+                      </h3>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(invoice.status, invoice.balance)} shadow-sm`}>
+                        {getStatusText(invoice.status, invoice.balance)}
+                      </span>
+                    </div>
+                    <p className="text-white/80 text-xs sm:text-sm truncate">{invoice.customer}</p>
+                    <p className="text-white/60 text-xs">
+                      Due: {invoice.dueDate}
                     </p>
                   </div>
                 </div>
-                
-                <div className={`px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(invoice.status, invoice.balance)}`}>
-                  {getStatusText(invoice.status, invoice.balance)}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2 text-white/80">
-                  <span className="text-green-400">💰</span>
-                  <span className="font-semibold text-green-400">{formatCurrency(invoice.totalAmount)}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-white/80">
-                  <span className="text-blue-400">📅</span>
-                  <span>{formatDate(invoice.dueDate)}</span>
-                </div>
-                
-                {invoice.balance > 0 && (
-                  <div className="flex items-center gap-2 text-white/80">
-                    <span className="text-amber-400">⚠️</span>
-                    <span className="text-amber-400">Due: {formatCurrency(invoice.balance)}</span>
+                <div className="text-right flex-shrink-0 w-full sm:w-auto">
+                  <div className="font-bold text-white text-sm sm:text-base">
+                    {formatCurrency(invoice.totalAmount)}
                   </div>
-                )}
-                
-                <div className="flex items-center gap-2 text-white/80">
-                  <span className="text-purple-400">🕒</span>
-                  <span>{formatDate(invoice.txnDate)}</span>
+                  {invoice.balance > 0 && (
+                    <div className="text-amber-400 text-xs sm:text-sm">
+                      Outstanding: {formatCurrency(invoice.balance)}
+                    </div>
+                  )}
                 </div>
-              </div>
-              
-              {/* Hover Effect Indicator */}
-              <div className="mt-4 text-purple-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                Click to select and view details →
               </div>
             </div>
           ))
         )}
-
-        {filteredInvoices.length > 4 && (
-          <div className="text-center py-4">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <p className="text-white/80">
-                📋 Showing 4 of {filteredInvoices.length} invoices
-              </p>
-              <p className="text-white/60 text-sm mt-2">
-                Use search or filters to find specific invoices
-              </p>
-            </div>
+        
+        {!loading && filteredInvoices.length > 4 && (
+          <div className="text-center pt-3 sm:pt-4">
+            <p className="text-white/60 text-xs sm:text-sm">
+              Showing first 4 invoices • {filteredInvoices.length - 4} more available
+            </p>
           </div>
         )}
       </div>
-      
-      {/* Selected Invoice Details */}
-      {selectedInvoice && (
-        <div className="border-t border-white/10 p-6 bg-white/5 backdrop-blur-sm relative z-10">
-          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-            📄 Invoice Details
-          </h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-white/60">Customer:</span>
-              <p className="text-white font-medium">{selectedInvoice.customer}</p>
+
+      {/* Summary Footer */}
+      <div className="p-4 sm:p-6 border-t border-white/10 bg-white/5 backdrop-blur-sm relative z-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="text-center">
+            <div className="text-base sm:text-lg font-bold text-white">
+              {formatCurrency(stats.totalRevenue)}
             </div>
-            <div>
-              <span className="text-white/60">Amount:</span>
-              <p className="text-white font-medium">{formatCurrency(selectedInvoice.totalAmount)}</p>
-            </div>
-            <div>
-              <span className="text-white/60">Issue Date:</span>
-              <p className="text-white font-medium">{formatDate(selectedInvoice.txnDate)}</p>
-            </div>
-            <div>
-              <span className="text-white/60">Due Date:</span>
-              <p className="text-white font-medium">{formatDate(selectedInvoice.dueDate)}</p>
-            </div>
-            {selectedInvoice.balance > 0 && (
-              <div className="col-span-2">
-                <span className="text-white/60">Outstanding Balance:</span>
-                <p className="text-amber-400 font-medium">{formatCurrency(selectedInvoice.balance)}</p>
-              </div>
-            )}
+            <div className="text-white/60 text-xs sm:text-sm">Total Value</div>
+          </div>
+          <div className="text-center">
+            <div className="text-base sm:text-lg font-bold text-emerald-400">{stats.paidCount}</div>
+            <div className="text-white/60 text-xs sm:text-sm">Paid</div>
+          </div>
+          <div className="text-center col-span-2 sm:col-span-1">
+            <div className="text-base sm:text-lg font-bold text-amber-400">{stats.unpaidCount}</div>
+            <div className="text-white/60 text-xs sm:text-sm">Unpaid</div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 } 

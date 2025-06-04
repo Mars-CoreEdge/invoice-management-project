@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { tool } from 'ai';
-import { getQuickBooksService, Invoice, InvoiceSearchCriteria } from './quickbooks';
+import { mockInvoices, getInvoiceStats, formatCurrency, type Invoice } from './mock-data';
 import { format, parseISO, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
 // Zod schemas for validation
@@ -165,26 +165,25 @@ export const invoiceTools = {
     parameters: invoiceIdSchema,
     execute: async (params: any) => {
       try {
-        const qbs = getQuickBooksService();
-        const invoice = await qbs.getInvoice(params.invoiceId);
+        const invoice = mockInvoices.find(i => i.id === params.invoiceId);
         
         return {
           success: true,
           data: {
-            id: invoice.Id,
-            docNumber: invoice.DocNumber,
-            txnDate: invoice.TxnDate,
-            dueDate: invoice.DueDate,
-            totalAmount: invoice.TotalAmt,
-            balance: invoice.Balance,
-            customer: invoice.CustomerRef?.name || 'Unknown',
-            emailStatus: invoice.EmailStatus,
-            printStatus: invoice.PrintStatus,
-            lineItems: invoice.Line?.map((line: any) => ({
-              description: line.SalesItemLineDetail?.ItemRef?.name || 'Item',
-              quantity: line.SalesItemLineDetail?.Qty || 1,
-              unitPrice: line.SalesItemLineDetail?.UnitPrice || 0,
-              amount: line.Amount
+            id: invoice?.id || 'Unknown',
+            docNumber: invoice?.docNumber || 'Unknown',
+            txnDate: invoice?.txnDate || 'Unknown',
+            dueDate: invoice?.dueDate || 'Unknown',
+            totalAmount: invoice?.totalAmount || 0,
+            balance: invoice?.balance || 0,
+            customer: invoice?.customer || 'Unknown',
+            emailStatus: invoice?.emailStatus || 'Unknown',
+            printStatus: invoice?.printStatus || 'Unknown',
+            lineItems: invoice?.lineItems?.map((line: any) => ({
+              description: line.description || 'Item',
+              quantity: line.quantity || 1,
+              unitPrice: line.unitPrice || 0,
+              amount: line.amount || 0
             })) || []
           }
         };
@@ -202,31 +201,26 @@ export const invoiceTools = {
     parameters: invoiceSearchSchema,
     execute: async (params: any) => {
       try {
-        const qbs = getQuickBooksService();
-        const criteria: InvoiceSearchCriteria = {
-          customerId: params.customerId,
-          startDate: params.startDate,
-          endDate: params.endDate,
-          status: params.status,
-          limit: params.limit || 20,
-          offset: params.offset || 0
-        };
-        
-        const invoices = await qbs.findInvoices(criteria);
+        const invoices = mockInvoices.filter(i =>
+          (!params.customerId || i.customerId === params.customerId) &&
+          (!params.startDate || i.txnDate >= params.startDate) &&
+          (!params.endDate || i.txnDate <= params.endDate) &&
+          (!params.status || (i.balance === 0 ? 'paid' : i.dueDate && new Date(i.dueDate) < new Date()) === params.status))
+          .slice(params.offset || 0, (params.limit || 20) + (params.offset || 0));
         
         return {
           success: true,
           data: {
             invoices: invoices.map((invoice: any) => ({
-              id: invoice.Id,
-              docNumber: invoice.DocNumber,
-              txnDate: invoice.TxnDate,
-              dueDate: invoice.DueDate,
-              totalAmount: invoice.TotalAmt,
-              balance: invoice.Balance,
-              customer: invoice.CustomerRef?.name || 'Unknown',
-              status: invoice.Balance === 0 ? 'paid' : 
-                     (invoice.DueDate && new Date(invoice.DueDate) < new Date()) ? 'overdue' : 'unpaid'
+              id: invoice.id,
+              docNumber: invoice.docNumber,
+              txnDate: invoice.txnDate,
+              dueDate: invoice.dueDate,
+              totalAmount: invoice.totalAmount,
+              balance: invoice.balance,
+              customer: invoice.customer,
+              status: invoice.balance === 0 ? 'paid' : 
+                     (invoice.dueDate && new Date(invoice.dueDate) < new Date()) ? 'overdue' : 'unpaid'
             })),
             count: invoices.length,
             hasMore: invoices.length === (params.limit || 20)
@@ -246,43 +240,44 @@ export const invoiceTools = {
     parameters: createInvoiceSchema,
     execute: async (params: any) => {
       try {
-        const qbs = getQuickBooksService();
-        
-        const invoiceData = {
-          CustomerRef: {
-            value: params.customerId,
-            name: params.customerName
-          },
-          DueDate: params.dueDate || format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-          Line: params.items.map((item: any, index: number) => ({
-            Id: String(index + 1),
-            Amount: item.amount,
-            DetailType: "SalesItemLineDetail",
-            SalesItemLineDetail: {
-              ItemRef: {
-                value: item.itemId,
-                name: item.itemName
-              },
-              Qty: item.quantity,
-              UnitPrice: item.unitPrice
-            }
+        const newInvoice: Invoice = {
+          id: (mockInvoices.length + 1).toString(),
+          docNumber: `INV-100${mockInvoices.length + 1}`,
+          txnDate: format(new Date(), 'yyyy-MM-dd'),
+          dueDate: params.dueDate || format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+          totalAmount: params.items.reduce((total: number, item: any) => total + item.amount, 0),
+          balance: params.items.reduce((total: number, item: any) => total + item.amount, 0),
+          customer: params.customerName || params.customerId,
+          customerId: params.customerId,
+          status: 'unpaid',
+          emailStatus: 'Not Sent',
+          printStatus: 'Not Printed',
+          syncToken: '1.0',
+          lineItems: params.items.map((item: any, index: number) => ({
+            id: String(index + 1),
+            amount: item.amount,
+            description: item.itemName || item.itemId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            accountId: '2',
+            accountName: 'Accounts Receivable'
           }))
         };
 
-        const invoice = await qbs.createInvoice(invoiceData);
+        mockInvoices.push(newInvoice);
         
         // Optionally send email if provided
         if (params.emailAddress) {
-          await qbs.sendInvoicePdf(invoice.Id, params.emailAddress);
+          // Implementation of sending email
         }
         
         return {
           success: true,
           data: {
-            id: invoice.Id,
-            docNumber: invoice.DocNumber,
-            totalAmount: invoice.TotalAmt,
-            customer: invoice.CustomerRef?.name,
+            id: newInvoice.id,
+            docNumber: newInvoice.docNumber,
+            totalAmount: newInvoice.totalAmount,
+            customer: newInvoice.customer,
             emailSent: !!params.emailAddress
           }
         };
@@ -300,45 +295,48 @@ export const invoiceTools = {
     parameters: updateInvoiceSchema,
     execute: async (params: any) => {
       try {
-        const qbs = getQuickBooksService();
+        const invoice = mockInvoices.find(i => i.id === params.invoiceId);
         
-        // Get current invoice first
-        const currentInvoice = await qbs.getInvoice(params.invoiceId);
+        if (!invoice) {
+          return {
+            success: false,
+            error: 'Invoice not found'
+          };
+        }
         
         // Prepare update data
         const updateData: any = {
-          Id: params.invoiceId,
-          SyncToken: currentInvoice.SyncToken
+          id: params.invoiceId,
+          syncToken: invoice.syncToken || '1.0'
         };
         
         if (params.updates.dueDate) {
-          updateData.DueDate = params.updates.dueDate;
+          updateData.dueDate = params.updates.dueDate;
         }
         
         if (params.updates.items) {
-          updateData.Line = params.updates.items.map((item: any, index: number) => ({
-            Id: String(index + 1),
-            Amount: item.amount,
-            DetailType: "SalesItemLineDetail",
-            SalesItemLineDetail: {
-              ItemRef: {
-                value: item.itemId,
-                name: item.itemName
-              },
-              Qty: item.quantity,
-              UnitPrice: item.unitPrice
-            }
+          updateData.lineItems = params.updates.items.map((item: any, index: number) => ({
+            id: String(index + 1),
+            amount: item.amount,
+            description: item.itemName || item.itemId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            accountId: '2', // Assuming a default account ID
+            accountName: 'Accounts Receivable'
           }));
         }
 
-        const updatedInvoice = await qbs.updateInvoice(updateData);
+        const updatedInvoice = { ...invoice, ...updateData };
+        
+        const index = mockInvoices.findIndex(i => i.id === params.invoiceId);
+        mockInvoices[index] = updatedInvoice;
         
         return {
           success: true,
           data: {
-            id: updatedInvoice.Id,
-            docNumber: updatedInvoice.DocNumber,
-            totalAmount: updatedInvoice.TotalAmt,
+            id: updatedInvoice.id,
+            docNumber: updatedInvoice.docNumber,
+            totalAmount: updatedInvoice.totalAmount,
             message: 'Invoice updated successfully'
           }
         };
@@ -356,8 +354,19 @@ export const invoiceTools = {
     parameters: invoiceIdSchema,
     execute: async ({ invoiceId }) => {
       try {
-        const qbs = getQuickBooksService();
-        await qbs.voidInvoice(invoiceId);
+        const invoice = mockInvoices.find(i => i.id === invoiceId);
+        
+        if (!invoice) {
+          return {
+            success: false,
+            error: 'Invoice not found'
+          };
+        }
+        
+        const voidedInvoice = { ...invoice, balance: invoice.totalAmount, emailStatus: 'Voided', printStatus: 'Voided' };
+        
+        const index = mockInvoices.findIndex(i => i.id === invoiceId);
+        mockInvoices[index] = voidedInvoice;
         
         return {
           success: true,
@@ -380,8 +389,19 @@ export const invoiceTools = {
     parameters: invoiceIdSchema,
     execute: async ({ invoiceId }) => {
       try {
-        const qbs = getQuickBooksService();
-        await qbs.deleteInvoice(invoiceId);
+        const invoice = mockInvoices.find(i => i.id === invoiceId);
+        
+        if (!invoice) {
+          return {
+            success: false,
+            error: 'Invoice not found'
+          };
+        }
+        
+        const deletedInvoice = { ...invoice, balance: invoice.totalAmount, emailStatus: 'Deleted', printStatus: 'Deleted' };
+        
+        const index = mockInvoices.findIndex(i => i.id === invoiceId);
+        mockInvoices.splice(index, 1);
         
         return {
           success: true,
@@ -404,8 +424,16 @@ export const invoiceTools = {
     parameters: emailInvoiceSchema,
     execute: async ({ invoiceId, emailAddress }) => {
       try {
-        const qbs = getQuickBooksService();
-        await qbs.sendInvoicePdf(invoiceId, emailAddress);
+        const invoice = mockInvoices.find(i => i.id === invoiceId);
+        
+        if (!invoice) {
+          return {
+            success: false,
+            error: 'Invoice not found'
+          };
+        }
+        
+        // Implementation of sending email
         
         return {
           success: true,
@@ -429,29 +457,28 @@ export const invoiceTools = {
     parameters: dateRangeSchema,
     execute: async (params: any) => {
       try {
-        const qbs = getQuickBooksService();
         const dateRange = getDateRange(params.period, params.startDate, params.endDate);
         
-        const invoices = await qbs.findInvoices({
-          startDate: dateRange.start,
-          endDate: dateRange.end
-        });
+        const invoices = mockInvoices.filter(i =>
+          i.txnDate >= dateRange.start &&
+          i.txnDate <= dateRange.end
+        );
         
         const stats = invoices.reduce((acc: any, invoice: any) => {
           acc.totalInvoices++;
-          acc.totalAmount += invoice.TotalAmt || 0;
-          acc.totalBalance += invoice.Balance || 0;
+          acc.totalAmount += invoice.totalAmount || 0;
+          acc.totalBalance += invoice.balance || 0;
           
-          if (invoice.Balance === 0) {
+          if (invoice.balance === 0) {
             acc.paidInvoices++;
-            acc.paidAmount += invoice.TotalAmt || 0;
+            acc.paidAmount += invoice.totalAmount || 0;
           } else {
             acc.unpaidInvoices++;
-            acc.unpaidAmount += invoice.Balance || 0;
+            acc.unpaidAmount += invoice.balance || 0;
             
-            if (invoice.DueDate && new Date(invoice.DueDate) < new Date()) {
+            if (invoice.dueDate && new Date(invoice.dueDate) < new Date()) {
               acc.overdueInvoices++;
-              acc.overdueAmount += invoice.Balance || 0;
+              acc.overdueAmount += invoice.balance || 0;
             }
           }
           
@@ -509,19 +536,18 @@ export const invoiceTools = {
     parameters: z.object({}),
     execute: async () => {
       try {
-        const qbs = getQuickBooksService();
-        const customers = await qbs.getCustomers();
+        const customers = mockInvoices.map(i => i.customer).filter((c, index, self) => self.indexOf(c) === index);
         
         return {
           success: true,
           data: {
             customers: customers.map(customer => ({
-              id: customer.Id,
-              name: customer.Name,
-              companyName: customer.CompanyName,
-              email: customer.PrimaryEmailAddr?.Address,
-              phone: customer.PrimaryPhone?.FreeFormNumber,
-              balance: customer.Balance || 0
+              id: customer,
+              name: customer,
+              companyName: '',
+              email: '',
+              phone: '',
+              balance: 0
             }))
           }
         };
@@ -539,20 +565,19 @@ export const invoiceTools = {
     parameters: z.object({}),
     execute: async () => {
       try {
-        const qbs = getQuickBooksService();
-        const items = await qbs.getItems();
+        const items = mockInvoices.map(i => ({
+          id: i.id,
+          name: i.docNumber,
+          description: i.lineItems.map(li => li.description).join(', '),
+          unitPrice: i.lineItems.reduce((total: number, li: any) => total + li.unitPrice, 0),
+          type: 'Service',
+          active: true
+        }));
         
         return {
           success: true,
           data: {
-            items: items.map(item => ({
-              id: item.Id,
-              name: item.Name,
-              description: item.Description,
-              unitPrice: item.UnitPrice || 0,
-              type: item.Type,
-              active: item.Active
-            }))
+            items: items
           }
         };
       } catch (error: any) {
