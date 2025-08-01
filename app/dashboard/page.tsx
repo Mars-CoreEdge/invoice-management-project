@@ -6,11 +6,14 @@ import { ChatPanel } from '@/components/ChatPanel'
 import { Header } from '@/components/Header'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, CheckCircle, Settings } from 'lucide-react'
+import { useUser } from '@/components/UserProvider'
 
 export default function Dashboard() {
+  const { user, loading } = useUser()
   const [isQuickBooksConnected, setIsQuickBooksConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
+
 
   useEffect(() => {
     // Check URL params for OAuth callback status
@@ -43,6 +46,21 @@ export default function Dashboard() {
       window.history.replaceState({}, '', '/dashboard')
     }
   }, [])
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    )
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    window.location.href = '/auth/login'
+    return null
+  }
 
   const handleQuickBooksConnect = () => {
     window.location.href = '/api/auth/quickbooks'

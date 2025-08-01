@@ -1,6 +1,7 @@
 'use client'
 
 import { getInvoiceStats, formatCurrency } from '../lib/mock-data'
+import { createClient } from '@/lib/supabase'
 
 interface HeaderProps {
   isConnected?: boolean
@@ -8,6 +9,12 @@ interface HeaderProps {
 
 export function Header({ isConnected = false }: HeaderProps) {
   const stats = getInvoiceStats()
+  const supabase = createClient()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/auth/login'
+  }
   
   return (
     <header className="bg-white/5 backdrop-blur-xl border-b border-white/10 relative z-20">
@@ -28,7 +35,7 @@ export function Header({ isConnected = false }: HeaderProps) {
             </div>
           </div>
 
-          {/* Status Indicators */}
+          {/* Status Indicators and User Menu */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {isConnected ? (
               <>
@@ -47,6 +54,17 @@ export function Header({ isConnected = false }: HeaderProps) {
                 <span className="text-amber-100 font-medium">Setup Required</span>
               </div>
             )}
+            
+            {/* Logout Button */}
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 bg-red-500/20 backdrop-blur-sm px-3 sm:px-4 py-2 rounded-xl border border-red-400/30 text-xs sm:text-sm text-red-100 hover:bg-red-500/30 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Sign Out
+            </button>
           </div>
         </div>
 
