@@ -6,10 +6,12 @@ import { ChatPanel } from '@/components/ChatPanel'
 import { Header } from '@/components/Header'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, CheckCircle, Settings } from 'lucide-react'
-import { useUser } from '@/components/UserProvider'
+import { useAuth } from '@/components/AuthContext'
+import SessionInfo from '@/components/SessionInfo'
+import Link from 'next/link'
 
 export default function Dashboard() {
-  const { user, loading } = useUser()
+  const { user, loading } = useAuth()
   const [isQuickBooksConnected, setIsQuickBooksConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
@@ -56,15 +58,12 @@ export default function Dashboard() {
     )
   }
 
-  // Redirect to login if not authenticated
+  // AuthContext handles redirects automatically
   if (!user) {
-    window.location.href = '/auth/login'
     return null
   }
 
-  const handleQuickBooksConnect = () => {
-    window.location.href = '/api/auth/quickbooks'
-  }
+  // QuickBooks connect is handled by API route which redirects to external OAuth
 
   const handleInvoiceSelect = (invoice: any) => {
     setSelectedInvoice(invoice)
@@ -144,23 +143,22 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
                   </div>
                 )}
 
-                <button 
-                  onClick={handleQuickBooksConnect}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-2xl text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0 group"
-                  disabled={connectionError?.includes('environment variable')}
-                >
-                  {connectionError?.includes('environment variable') ? (
-                    <>
-                      <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:rotate-12 transition-transform" />
-                      Configure Environment Variables First
-                    </>
-                  ) : (
-                    <>
-                      <span className="mr-3">✨</span>
-                      Connect QuickBooks Online
-                    </>
-                  )}
-                </button>
+                                 <Link 
+                   href="/api/auth/quickbooks"
+                   className={`w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-2xl text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0 group flex items-center justify-center ${connectionError?.includes('environment variable') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                 >
+                   {connectionError?.includes('environment variable') ? (
+                     <>
+                       <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-3 group-hover:rotate-12 transition-transform" />
+                       Configure Environment Variables First
+                     </>
+                   ) : (
+                     <>
+                       <span className="mr-3">✨</span>
+                       Connect QuickBooks Online
+                     </>
+                   )}
+                 </Link>
 
                 <p className="text-purple-300 text-xs sm:text-sm mt-4 sm:mt-6 flex items-center justify-center gap-2">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
@@ -213,6 +211,11 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
             onInvoiceSelect={handleInvoiceSelect}
           />
         </div>
+      </div>
+
+      {/* Session Info Panel - Debug/Development Only */}
+      <div className="p-3 sm:p-6 relative z-10">
+        <SessionInfo />
       </div>
     </div>
   )

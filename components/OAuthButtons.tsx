@@ -1,23 +1,18 @@
 'use client'
 
-import { createClient } from '@/lib/supabase'
 import { Github, Chrome } from 'lucide-react'
+import { useAuth } from './AuthContext'
 
 interface OAuthButtonsProps {
   mode: 'login' | 'signup'
 }
 
 export default function OAuthButtons({ mode }: OAuthButtonsProps) {
-  const supabase = createClient()
+  const { signInWithOAuth } = useAuth()
 
   const handleGitHubSignIn = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
+      const { error } = await signInWithOAuth('github')
       if (error) throw error
     } catch (error: any) {
       console.error('GitHub sign in error:', error.message)
@@ -26,12 +21,7 @@ export default function OAuthButtons({ mode }: OAuthButtonsProps) {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
+      const { error } = await signInWithOAuth('google')
       if (error) throw error
     } catch (error: any) {
       console.error('Google sign in error:', error.message)

@@ -1,7 +1,7 @@
 'use client'
 
 import { getInvoiceStats, formatCurrency } from '../lib/mock-data'
-import { createClient } from '@/lib/supabase'
+import { useAuth } from './AuthContext'
 
 interface HeaderProps {
   isConnected?: boolean
@@ -9,11 +9,11 @@ interface HeaderProps {
 
 export function Header({ isConnected = false }: HeaderProps) {
   const stats = getInvoiceStats()
-  const supabase = createClient()
+  const { signOut } = useAuth()
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/auth/login'
+    await signOut()
+    // AuthContext handles redirect automatically
   }
   
   return (
