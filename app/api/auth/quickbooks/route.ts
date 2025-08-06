@@ -4,7 +4,7 @@ import { getQuickBooksService } from '@/lib/quickbooks';
 export async function GET(request: Request) {
   try {
     console.log('QuickBooks OAuth initiation requested');
-    console.log('Using hardcoded credentials - environment variables bypassed');
+    console.log('Using Express server credentials');
 
     console.log('Creating QuickBooks service...');
     const qbs = getQuickBooksService();

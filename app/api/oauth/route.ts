@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getQuickBooksService } from '@/lib/quickbooks';
-import { getQuickBooksTokenManager } from '@/lib/quickbooks-token-manager';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
@@ -60,30 +58,34 @@ export async function GET(request: Request) {
       );
     }
     
-    // Get the current authenticated user
-    const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.error('Authentication error:', authError);
-      return NextResponse.redirect(
-        new URL('/auth/login?error=unauthorized&message=' + encodeURIComponent('Please log in to connect QuickBooks'), request.url)
-      );
-    }
-    
-    console.log('Authenticated user:', user.id);
-    
     console.log('Getting QuickBooks service...');
     const qbs = getQuickBooksService();
     console.log('QuickBooks service obtained successfully');
     
     console.log('Creating token with QuickBooks...');
-    await qbs.createToken(code, realmId, user.id);
-    console.log('Token created and stored securely');
+    await qbs.createToken(code, realmId);
+    console.log('Token created successfully');
     
-    console.log('Redirecting to dashboard with success');
+    // Get the QBO session object
+    const qboSession = qbs.getQBOSession();
+    if (!qboSession) {
+      throw new Error('Failed to create QBO session object');
+    }
+    
+    console.log('QBO Session created:', {
+      realmId: qboSession.realmId,
+      hasAccessToken: !!qboSession.access_token,
+      hasRefreshToken: !!qboSession.refresh_token,
+      clientId: qboSession.QUICKBOOKS_CLIENT_ID.substring(0, 8) + '...'
+    });
+    
+    // Store the session data in localStorage via a redirect with query params
+    // In a real app, you'd store this in a database or secure session
+    const sessionData = encodeURIComponent(JSON.stringify(qboSession));
+    
+    console.log('Redirecting to dashboard with success and session data');
     return NextResponse.redirect(
-      new URL('/dashboard?connected=true', request.url)
+      new URL(`/dashboard?connected=true&session=${sessionData}`, request.url)
     );
     
   } catch (error: any) {

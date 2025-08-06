@@ -89,6 +89,7 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
               {displayInvoices.length} of 4 invoices
             </div>
           </div>
+
         </div>
         
         {/* Search and Filter Controls */}

@@ -1,5 +1,6 @@
 import QuickBooks from 'node-quickbooks';
 import OAuthClient from 'intuit-oauth';
+import { getQuickBooksTokenManager, DecryptedTokens } from './quickbooks-token-manager';
 
 export interface QuickBooksConfig {
   clientId: string;
@@ -52,6 +53,14 @@ export interface InvoiceSearchCriteria {
   offset?: number;
 }
 
+export interface QBOSession {
+  realmId: string;
+  access_token: string;
+  refresh_token: string;
+  QUICKBOOKS_CLIENT_ID: string;
+  QUICKBOOKS_CLIENT_SECRET: string;
+}
+
 export class QuickBooksService {
   private qbo: any;
   private oauthClient: OAuthClient;
@@ -59,6 +68,8 @@ export class QuickBooksService {
   private refreshToken: string | null = null;
   private realmId: string | null = null;
   private config: QuickBooksConfig;
+  private userId: string | null = null;
+  private tokenManager = getQuickBooksTokenManager();
 
   constructor(config: QuickBooksConfig) {
     // Validate configuration
@@ -88,6 +99,38 @@ export class QuickBooksService {
     });
   }
 
+  // Getter methods to access authentication state
+  getAccessToken(): string | null {
+    return this.accessToken;
+  }
+
+  getRealmId(): string | null {
+    return this.realmId;
+  }
+
+  getUserId(): string | null {
+    return this.userId;
+  }
+
+  isAuthenticated(): boolean {
+    return !!(this.accessToken && this.realmId && this.userId);
+  }
+
+  // Get QBO session object
+  getQBOSession(): QBOSession | null {
+    if (!this.isAuthenticated()) {
+      return null;
+    }
+    
+    return {
+      realmId: this.realmId!,
+      access_token: this.accessToken!,
+      refresh_token: this.refreshToken!,
+      QUICKBOOKS_CLIENT_ID: this.config.clientId,
+      QUICKBOOKS_CLIENT_SECRET: this.config.clientSecret
+    };
+  }
+
   // OAuth flow methods
   getAuthUri(): string {
     try {
@@ -108,48 +151,140 @@ export class QuickBooksService {
     }
   }
 
-  async createToken(authCode: string, realmId: string): Promise<void> {
+  async createToken(authCode: string, realmId: string, userId: string): Promise<void> {
     try {
-      console.log('Creating token with QuickBooks... 2' );
-      const authResponse = await this.oauthClient.createToken(authCode);
+      console.log('Creating token with QuickBooks...');
+      console.log('Auth code:', authCode ? `${authCode.substring(0, 20)}...` : 'null');
+      console.log('Realm ID:', realmId);
+      console.log('User ID:', userId);
+      
+      // Manual token exchange to fix the empty request body issue
+      const tokenResponse = await this.exchangeCodeForToken(authCode);
 
-      console.log('Auth response:', authResponse);
+      console.log('Token response received:', {
+        hasAccessToken: !!tokenResponse.access_token,
+        hasRefreshToken: !!tokenResponse.refresh_token,
+        tokenType: tokenResponse.token_type,
+        expiresIn: tokenResponse.expires_in
+      });
 
-      // console.log('Token created successfully');
-      // console.log('Access token:', authResponse.access_token);
-      // console.log('Refresh token:', authResponse.refresh_token);
-      // console.log('Realm ID:', realmId);
+      if (!tokenResponse.access_token) {
+        throw new Error('No access token received from QuickBooks');
+      }
 
+      // Calculate expiration time
+      const expiresAt = new Date();
+      expiresAt.setSeconds(expiresAt.getSeconds() + (tokenResponse.expires_in || 3600));
 
-      this.accessToken = authResponse.access_token;
-      this.refreshToken = authResponse.refresh_token;
+      // Store tokens securely in database
+      await this.tokenManager.storeTokens(
+        userId,
+        tokenResponse.access_token,
+        tokenResponse.refresh_token,
+        realmId,
+        expiresAt
+      );
+
+      // Set local instance variables
+      this.accessToken = tokenResponse.access_token;
+      this.refreshToken = tokenResponse.refresh_token;
       this.realmId = realmId;
+      this.userId = userId;
+      
+      console.log('Tokens stored successfully in database');
+      console.log('Access token:', this.accessToken ? `${this.accessToken.substring(0, 20)}...` : 'null');
+      console.log('Refresh token:', this.refreshToken ? `${this.refreshToken.substring(0, 20)}...` : 'null');
+      console.log('Realm ID:', this.realmId);
+      console.log('User ID:', this.userId);
       
       this.initializeQBO();
-
-      // console.log('Token created successfully');
-      // console.log('Access token:', this.accessToken);
-      // console.log('Refresh token:', this.refreshToken);
-      // console.log('Realm ID:', this.realmId);
+      console.log('QuickBooks service initialized successfully');
 
     } catch (error) {
       console.error('Error creating token:', error);
-      // throw new Error(`QuickBooks OAuth failed: ${error}`);
+      throw new Error(`QuickBooks OAuth failed: ${error}`);
     }
   }
 
+  private async exchangeCodeForToken(authCode: string): Promise<any> {
+    const tokenUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+    
+    // Create Basic Auth header
+    const credentials = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64');
+    
+    // Prepare the request body
+    const requestBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: authCode,
+      redirect_uri: this.config.redirectUri
+    });
+
+    console.log('Token exchange request:', {
+      url: tokenUrl,
+      grantType: 'authorization_code',
+      code: authCode.substring(0, 20) + '...',
+      redirectUri: this.config.redirectUri
+    });
+
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${credentials}`,
+        'User-Agent': 'InvoiceManagement/1.0'
+      },
+      body: requestBody.toString()
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Token exchange failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      throw new Error(`Token exchange failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const tokenData = await response.json();
+    console.log('Token exchange successful:', {
+      hasAccessToken: !!tokenData.access_token,
+      hasRefreshToken: !!tokenData.refresh_token,
+      expiresIn: tokenData.expires_in
+    });
+
+    return tokenData;
+  }
+
   async refreshAccessToken(): Promise<void> {
-    if (!this.refreshToken) {
-      throw new Error('No refresh token available');
+    if (!this.refreshToken || !this.userId) {
+      throw new Error('No refresh token available or user not authenticated');
     }
 
     try {
       const authResponse = await this.oauthClient.refresh();
+      
+      // Calculate new expiration time
+      const expiresAt = new Date();
+      expiresAt.setSeconds(expiresAt.getSeconds() + (authResponse.expires_in || 3600));
+
+      // Update tokens in database
+      await this.tokenManager.updateTokens(
+        this.userId,
+        authResponse.access_token,
+        authResponse.refresh_token,
+        expiresAt
+      );
+
+      // Update local instance variables
       this.accessToken = authResponse.access_token;
       this.refreshToken = authResponse.refresh_token;
       
       this.initializeQBO();
+      console.log('Access token refreshed successfully');
     } catch (error) {
+      console.error('Token refresh failed:', error);
       throw new Error(`Token refresh failed: ${error}`);
     }
   }
@@ -166,17 +301,121 @@ export class QuickBooksService {
       false, // no token secret needed for OAuth 2.0
       this.realmId,
       true, // use sandbox
-      // true, // enable debugging
-      undefined, // minor version
+      true, // enable debugging
+      '4', // minor version
       '2.0', // oauth version
       this.refreshToken || undefined
     );
+  }
+
+  /**
+   * Load tokens from database for a specific user
+   */
+  async loadTokensForUser(userId: string): Promise<boolean> {
+    try {
+      console.log(`Loading QuickBooks tokens for user: ${userId}`);
+      
+      const tokens = await this.tokenManager.getTokens(userId);
+      
+      if (!tokens) {
+        console.log('No tokens found for user');
+        return false;
+      }
+
+      // Check if tokens are expired
+      if (new Date() >= tokens.expires_at) {
+        console.log('Tokens are expired, attempting refresh...');
+        try {
+          // Set current tokens for refresh
+          this.accessToken = tokens.access_token;
+          this.refreshToken = tokens.refresh_token;
+          this.realmId = tokens.realm_id;
+          this.userId = userId;
+          
+          await this.refreshAccessToken();
+          return true;
+        } catch (refreshError) {
+          console.error('Failed to refresh expired tokens:', refreshError);
+          // Clean up expired tokens
+          await this.tokenManager.deleteTokens(userId);
+          return false;
+        }
+      }
+
+      // Set tokens for current session
+      this.accessToken = tokens.access_token;
+      this.refreshToken = tokens.refresh_token;
+      this.realmId = tokens.realm_id;
+      this.userId = userId;
+      
+      this.initializeQBO();
+      console.log('QuickBooks tokens loaded successfully from database');
+      return true;
+      
+    } catch (error) {
+      console.error('Error loading tokens for user:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Disconnect QuickBooks for a user
+   */
+  async disconnectUser(userId: string): Promise<void> {
+    try {
+      await this.tokenManager.deleteTokens(userId);
+      
+      // Clear local instance variables
+      this.accessToken = null;
+      this.refreshToken = null;
+      this.realmId = null;
+      this.userId = null;
+      this.qbo = null;
+      
+      console.log(`QuickBooks disconnected for user: ${userId}`);
+    } catch (error) {
+      console.error('Error disconnecting user:', error);
+      throw error;
+    }
   }
 
   // Helper method to check if authenticated
   private checkAuthentication(): void {
     if (!this.accessToken || !this.realmId || !this.qbo) {
       throw new Error('QuickBooks authentication required. Please connect your QuickBooks account first.');
+    }
+  }
+
+  // Direct API method to fetch invoices (same as Express server)
+  async fetchInvoicesDirect(limit: number = 10): Promise<any[]> {
+    if (!this.accessToken || !this.realmId) {
+      throw new Error('QuickBooks authentication required. Please connect your QuickBooks account first.');
+    }
+
+    const query = 'SELECT * FROM Invoice';
+    const startposition = 1;
+    const maxresults = limit;
+    const minorversion = 65;
+    const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${this.realmId}/query?query=${encodeURIComponent(query)}&startposition=${startposition}&maxresults=${maxresults}&minorversion=${minorversion}`;
+
+    try {
+      const apiRes = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      const data = await apiRes.json();
+
+      if (data.Fault) {
+        throw new Error(`QuickBooks API Error: ${JSON.stringify(data.Fault)}`);
+      }
+
+      return data.QueryResponse?.Invoice || [];
+    } catch (error) {
+      throw new Error(`Failed to fetch invoices: ${error}`);
     }
   }
 
@@ -198,51 +437,41 @@ export class QuickBooksService {
   async findInvoices(criteria: InvoiceSearchCriteria = {}): Promise<Invoice[]> {
     this.checkAuthentication();
     
-    return new Promise((resolve, reject) => {
-      let query = "SELECT * FROM Invoice";
-      const conditions: string[] = [];
+    try {
+      // Use the direct API approach that we know works
+      const limit = criteria.limit || 50;
+      const query = 'SELECT * FROM Invoice';
+      const startposition = (criteria.offset || 0) + 1;
+      const maxresults = limit;
+      const minorversion = 65;
+      
+      const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${this.realmId}/query?query=${encodeURIComponent(query)}&startposition=${startposition}&maxresults=${maxresults}&minorversion=${minorversion}`;
 
-      if (criteria.customerId) {
-        conditions.push(`CustomerRef = '${criteria.customerId}'`);
-      }
+      console.log('Fetching invoices from QuickBooks API:', url);
 
-      if (criteria.startDate) {
-        conditions.push(`TxnDate >= '${criteria.startDate}'`);
-      }
-
-      if (criteria.endDate) {
-        conditions.push(`TxnDate <= '${criteria.endDate}'`);
-      }
-
-      if (criteria.status === 'paid') {
-        conditions.push(`Balance = '0'`);
-      } else if (criteria.status === 'unpaid') {
-        conditions.push(`Balance > '0'`);
-      } else if (criteria.status === 'overdue') {
-        const today = new Date().toISOString().split('T')[0];
-        conditions.push(`Balance > '0' AND DueDate < '${today}'`);
-      }
-
-      if (conditions.length > 0) {
-        query += ` WHERE ${conditions.join(' AND ')}`;
-      }
-
-      if (criteria.limit) {
-        query += ` MAXRESULTS ${criteria.limit}`;
-      }
-
-      if (criteria.offset) {
-        query += ` STARTPOSITION ${criteria.offset + 1}`;
-      }
-
-      this.qbo.findInvoices(query, (err: any, invoices: Invoice[]) => {
-        if (err) {
-          reject(new Error(`Failed to find invoices: ${err.message}`));
-        } else {
-          resolve(invoices || []);
+      const apiRes = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Accept': 'application/json'
         }
       });
-    });
+
+      const data = await apiRes.json();
+
+      if (data.Fault) {
+        console.error('QuickBooks API Error:', data.Fault);
+        throw new Error(`QuickBooks API Error: ${JSON.stringify(data.Fault)}`);
+      }
+
+      const invoices = data.QueryResponse?.Invoice || [];
+      console.log(`Found ${invoices.length} invoices from QuickBooks`);
+
+      return invoices;
+    } catch (error) {
+      console.error('Error in findInvoices:', error);
+      throw new Error(`Failed to find invoices: ${error}`);
+    }
   }
 
   async createInvoice(invoiceData: Partial<Invoice>): Promise<Invoice> {
@@ -362,22 +591,39 @@ let quickBooksService: QuickBooksService | null = null;
 
 export function getQuickBooksService(): QuickBooksService {
   if (!quickBooksService) {
-    // Hardcoded credentials - replace environment variable loading
-    const clientId = 'ABRZKV0y73YEqiuQNZYwZm7ycQspsMJwlO8TWwD3XDj8D3zqhY';
-    const clientSecret = 'MS1VHy2IWJWwYvCCoVHoHLgaCbD5ghCktrL9xcTn';
-    const nextAuthUrl = 'http://localhost:3000';
+    // Use environment variables for configuration
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+    const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI;
 
-    console.log('Using hardcoded credentials:', {
+    // Validate required environment variables
+    if (!clientId) {
+      throw new Error('QUICKBOOKS_CLIENT_ID environment variable is required');
+    }
+    if (!clientSecret) {
+      throw new Error('QUICKBOOKS_CLIENT_SECRET environment variable is required');
+    }
+    if (!redirectUri) {
+      throw new Error('QUICKBOOKS_REDIRECT_URI environment variable is required');
+    }
+
+    console.log('Creating new QuickBooks service instance:', {
       clientId: clientId.substring(0, 8) + '...',
-      nextAuthUrl
+      redirectUri
     });
 
     quickBooksService = new QuickBooksService({
       clientId,
       clientSecret,
       environment: 'sandbox',
-      redirectUri: `${nextAuthUrl}/api/auth/quickbooks/callback`,
+      redirectUri,
     });
   }
   return quickBooksService;
+}
+
+// Reset function for testing/debugging
+export function resetQuickBooksService(): void {
+  quickBooksService = null;
+  console.log('QuickBooks service reset');
 } 

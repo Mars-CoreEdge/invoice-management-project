@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getQuickBooksService } from '@/lib/quickbooks';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
@@ -25,7 +26,34 @@ export async function GET(request: Request) {
       endDate
     });
 
+    // Get the current authenticated user
+    const supabase = createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized',
+        details: 'Please log in to access invoices',
+        requiresAuth: true
+      }, { status: 401 });
+    }
+
+    console.log('Authenticated user:', user.id);
+
     const qbs = getQuickBooksService();
+    
+    // Load tokens for the authenticated user
+    const tokensLoaded = await qbs.loadTokensForUser(user.id);
+    if (!tokensLoaded) {
+      return NextResponse.json({
+        success: false,
+        error: 'QuickBooks connection required',
+        details: 'Please connect your QuickBooks account first',
+        requiresAuth: true
+      }, { status: 401 });
+    }
     
     // Build search criteria
     const criteria: any = {

@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { InvoicePanel } from '@/components/InvoicePanel'
 import { ChatPanel } from '@/components/ChatPanel'
 import { Header } from '@/components/Header'
+import { QuickBooksIntegration } from '@/components/QuickBooksIntegration'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, CheckCircle, Settings } from 'lucide-react'
+import { AlertCircle, CheckCircle, Settings, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/components/AuthContext'
 import SessionInfo from '@/components/SessionInfo'
 import Link from 'next/link'
@@ -15,7 +16,24 @@ export default function Dashboard() {
   const [isQuickBooksConnected, setIsQuickBooksConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
+  const [quickBooksStatus, setQuickBooksStatus] = useState<any>(null)
+  const [checkingStatus, setCheckingStatus] = useState(false)
 
+  const checkQuickBooksStatus = async () => {
+    setCheckingStatus(true)
+    try {
+      const response = await fetch('/api/auth/quickbooks/status')
+      const result = await response.json()
+      if (result.success) {
+        setQuickBooksStatus(result.status)
+        setIsQuickBooksConnected(result.status.isAuthenticated)
+      }
+    } catch (error) {
+      console.error('Error checking QuickBooks status:', error)
+    } finally {
+      setCheckingStatus(false)
+    }
+  }
 
   useEffect(() => {
     // Check URL params for OAuth callback status
@@ -47,6 +65,9 @@ export default function Dashboard() {
       // Clean URL
       window.history.replaceState({}, '', '/dashboard')
     }
+
+    // Check current QuickBooks status on load
+    checkQuickBooksStatus()
   }, [])
 
   // Show loading state while checking authentication
@@ -106,6 +127,30 @@ export default function Dashboard() {
                   Start managing your invoices with AI-powered automation. Connect your QuickBooks account to unlock intelligent invoice management.
                 </p>
                 
+                {/* Debug Status */}
+                {quickBooksStatus && (
+                  <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 text-left">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-semibold text-blue-200">Debug Status</div>
+                      <button
+                        onClick={checkQuickBooksStatus}
+                        disabled={checkingStatus}
+                        className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} />
+                        Refresh
+                      </button>
+                    </div>
+                    <div className="text-blue-100 text-sm space-y-1">
+                      <div>Authenticated: <span className={quickBooksStatus.isAuthenticated ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.isAuthenticated ? 'Yes' : 'No'}</span></div>
+                      <div>Has Access Token: <span className={quickBooksStatus.hasAccessToken ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.hasAccessToken ? 'Yes' : 'No'}</span></div>
+                      <div>Has Realm ID: <span className={quickBooksStatus.hasRealmId ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.hasRealmId ? 'Yes' : 'No'}</span></div>
+                      <div>Realm ID: <span className="text-blue-300">{quickBooksStatus.realmId || 'None'}</span></div>
+                      <div>Last Check: <span className="text-blue-300">{new Date(quickBooksStatus.timestamp).toLocaleTimeString()}</span></div>
+                    </div>
+                  </div>
+                )}
+                
                 {connectionError && (
                   <div className="bg-red-500/20 backdrop-blur-sm border border-red-400/30 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 text-left">
                     <div className="flex items-start gap-3 sm:gap-4">
@@ -121,8 +166,8 @@ export default function Dashboard() {
                               <li>Add the following variables:</li>
                             </ol>
                             <pre className="bg-red-900/30 p-3 sm:p-4 rounded-lg text-xs overflow-x-auto text-red-100 border border-red-400/20">
-{`QUICKBOOKS_CLIENT_ID=ABRZKV0y73YEqiuQNZYwZm7ycQspsMJwlO8TWwD3XDj8D3zqhY
-QUICKBOOKS_CLIENT_SECRET=MS1VHy2IWJWwYvCCoVHoHLgaCbD5ghCktrL9xcTn
+{`QUICKBOOKS_CLIENT_ID=ABSFYKSSif94K6kxnbWNKQdhaZymuzERq3vRsStyiBWDXsZQlN
+QUICKBOOKS_CLIENT_SECRET=cvTx8XlEQL6d2yOh7hNEP8wUedaQCSIswJawlJVu
 NEXTAUTH_URL=http://localhost:3000
 OPENAI_API_KEY=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`}
                             </pre>
@@ -196,12 +241,9 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
       
       {/* Main responsive layout - stacks vertically on mobile, side-by-side on larger screens */}
       <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 p-3 sm:p-6 relative z-10 min-h-0">
-        {/* Invoice Panel - full width on mobile, half width on desktop */}
+        {/* QuickBooks Integration Panel - full width on mobile, half width on desktop */}
         <div className="w-full lg:w-1/2 h-[calc(100vh-16rem)] lg:h-auto lg:flex-1">
-          <InvoicePanel 
-            selectedInvoice={selectedInvoice}
-            onInvoiceSelect={handleInvoiceSelect}
-          />
+          <QuickBooksIntegration />
         </div>
 
         {/* AI Chat Panel - full width on mobile, half width on desktop */}
