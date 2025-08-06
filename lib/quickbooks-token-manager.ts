@@ -28,7 +28,7 @@ export class QuickBooksTokenManager {
   }
 
   /**
-   * Store QuickBooks tokens for a user
+   * Store QuickBooks tokens for a user with idempotency
    */
   async storeTokens(
     userId: string,
@@ -44,20 +44,54 @@ export class QuickBooksTokenManager {
       const encryptedAccessToken = TokenEncryption.encrypt(accessToken, this.encryptionKey);
       const encryptedRefreshToken = TokenEncryption.encrypt(refreshToken, this.encryptionKey);
 
-             // Store in database with upsert to handle existing records
-       const { error } = await supabase
-         .from('quickbooks_tokens')
-         .upsert({
-           user_id: userId,
-           encrypted_access_token: encryptedAccessToken,
-           encrypted_refresh_token: encryptedRefreshToken,
-           realm_id: realmId,
-           expires_at: expiresAt.toISOString(),
-         });
+      console.log(`Storing tokens for user: ${userId}, realm: ${realmId}`);
 
-      if (error) {
-        console.error('Error storing QuickBooks tokens:', error);
-        throw new Error(`Failed to store tokens: ${error.message}`);
+      // First, check if tokens already exist for this user
+      const { data: existingTokens, error: checkError } = await supabase
+        .from('quickbooks_tokens')
+        .select('id, realm_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing tokens:', checkError);
+        throw new Error(`Failed to check existing tokens: ${checkError.message}`);
+      }
+
+      if (existingTokens) {
+        console.log(`Updating existing tokens for user: ${userId}`);
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('quickbooks_tokens')
+          .update({
+            encrypted_access_token: encryptedAccessToken,
+            encrypted_refresh_token: encryptedRefreshToken,
+            realm_id: realmId,
+            expires_at: expiresAt.toISOString(),
+          })
+          .eq('user_id', userId);
+
+        if (updateError) {
+          console.error('Error updating QuickBooks tokens:', updateError);
+          throw new Error(`Failed to update tokens: ${updateError.message}`);
+        }
+      } else {
+        console.log(`Creating new tokens for user: ${userId}`);
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from('quickbooks_tokens')
+          .insert({
+            user_id: userId,
+            encrypted_access_token: encryptedAccessToken,
+            encrypted_refresh_token: encryptedRefreshToken,
+            realm_id: realmId,
+            expires_at: expiresAt.toISOString(),
+          });
+
+        if (insertError) {
+          console.error('Error inserting QuickBooks tokens:', insertError);
+          throw new Error(`Failed to insert tokens: ${insertError.message}`);
+        }
       }
 
       console.log(`QuickBooks tokens stored successfully for user: ${userId}`);

@@ -39,6 +39,7 @@ export default function Dashboard() {
     // Check URL params for OAuth callback status
     const urlParams = new URLSearchParams(window.location.search)
     const connected = urlParams.get('connected')
+    const refresh = urlParams.get('refresh')
     const error = urlParams.get('error')
     const message = urlParams.get('message')
 
@@ -68,6 +69,15 @@ export default function Dashboard() {
 
     // Check current QuickBooks status on load
     checkQuickBooksStatus()
+    
+    // If refresh parameter is present, check status again after a short delay
+    if (refresh === 'true') {
+      setTimeout(() => {
+        checkQuickBooksStatus()
+        // Clean URL
+        window.history.replaceState({}, '', '/dashboard')
+      }, 1000)
+    }
   }, [])
 
   // Show loading state while checking authentication

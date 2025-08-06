@@ -322,9 +322,13 @@ export class QuickBooksService {
         return false;
       }
 
-      // Check if tokens are expired
-      if (new Date() >= tokens.expires_at) {
-        console.log('Tokens are expired, attempting refresh...');
+      // Check if tokens are expired (with 5-minute buffer)
+      const now = new Date();
+      const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+      const expiresAt = new Date(tokens.expires_at.getTime() - bufferTime);
+      
+      if (now >= expiresAt) {
+        console.log('Tokens are expired or will expire soon, attempting refresh...');
         try {
           // Set current tokens for refresh
           this.accessToken = tokens.access_token;

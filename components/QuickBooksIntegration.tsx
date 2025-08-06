@@ -79,12 +79,19 @@ export function QuickBooksIntegration() {
     setError(null)
     
     try {
-      const response = await fetch('/api/quickbooks/status')
+      const response = await fetch('/api/auth/quickbooks/status')
       const result = await response.json()
       
       if (result.success) {
-        setQuickBooksStatus(result)
-        if (result.connected) {
+        const status = result.status
+        setQuickBooksStatus({
+          connected: status.isAuthenticated,
+          companyName: status.companyName,
+          realmId: status.realmId,
+          message: status.isAuthenticated ? 'Connected to QuickBooks' : 'Not connected'
+        })
+        
+        if (status.isAuthenticated) {
           // Fetch invoices if connected
           fetchInvoices()
         }

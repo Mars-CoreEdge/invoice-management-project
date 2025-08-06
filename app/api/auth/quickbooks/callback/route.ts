@@ -78,12 +78,32 @@ export async function GET(request: Request) {
     console.log('QuickBooks service obtained successfully');
     
     console.log('Creating token with QuickBooks...');
-    await qbs.createToken(code, realmId, user.id);
-    console.log('Token created and stored securely');
+    
+    // Add retry logic for token creation
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        await qbs.createToken(code, realmId, user.id);
+        console.log('Token created and stored securely');
+        break;
+      } catch (error: any) {
+        retryCount++;
+        console.error(`Token creation attempt ${retryCount} failed:`, error);
+        
+        if (retryCount >= maxRetries) {
+          throw error;
+        }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
+    }
     
     console.log('Redirecting to dashboard with success');
     return NextResponse.redirect(
-      new URL('/dashboard?connected=true', request.url)
+      new URL('/dashboard?connected=true&refresh=true', request.url)
     );
     
   } catch (error: any) {
