@@ -6,7 +6,7 @@ import { ChatPanel } from '@/components/ChatPanel'
 import { Header } from '@/components/Header'
 import { QuickBooksIntegration } from '@/components/QuickBooksIntegration'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, CheckCircle, Settings, RefreshCw } from 'lucide-react'
+import { AlertCircle, CheckCircle, Settings, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/components/AuthContext'
 import SessionInfo from '@/components/SessionInfo'
 import Link from 'next/link'
@@ -137,29 +137,29 @@ export default function Dashboard() {
                   Start managing your invoices with AI-powered automation. Connect your QuickBooks account to unlock intelligent invoice management.
                 </p>
                 
-                {/* Debug Status */}
-                {quickBooksStatus && (
-                  <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 text-left">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="font-semibold text-blue-200">Debug Status</div>
-                      <button
-                        onClick={checkQuickBooksStatus}
-                        disabled={checkingStatus}
-                        className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors disabled:opacity-50"
-                      >
-                        <RefreshCw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} />
-                        Refresh
-                      </button>
-                    </div>
-                    <div className="text-blue-100 text-sm space-y-1">
-                      <div>Authenticated: <span className={quickBooksStatus.isAuthenticated ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.isAuthenticated ? 'Yes' : 'No'}</span></div>
-                      <div>Has Access Token: <span className={quickBooksStatus.hasAccessToken ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.hasAccessToken ? 'Yes' : 'No'}</span></div>
-                      <div>Has Realm ID: <span className={quickBooksStatus.hasRealmId ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.hasRealmId ? 'Yes' : 'No'}</span></div>
-                      <div>Realm ID: <span className="text-blue-300">{quickBooksStatus.realmId || 'None'}</span></div>
-                      <div>Last Check: <span className="text-blue-300">{new Date(quickBooksStatus.timestamp).toLocaleTimeString()}</span></div>
-                    </div>
-                  </div>
-                )}
+                                 {/* Debug Status - Commented out for production */}
+                 {/* {quickBooksStatus && (
+                   <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 text-left">
+                     <div className="flex items-center justify-between mb-3">
+                       <div className="font-semibold text-blue-200">Debug Status</div>
+                       <button
+                         onClick={checkQuickBooksStatus}
+                         disabled={checkingStatus}
+                         className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors disabled:opacity-50"
+                       >
+                         <RotateCcw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} />
+                         Refresh
+                       </button>
+                     </div>
+                     <div className="text-blue-100 text-sm space-y-1">
+                       <div>Authenticated: <span className={quickBooksStatus.isAuthenticated ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.isAuthenticated ? 'Yes' : 'No'}</span></div>
+                       <div>Has Access Token: <span className={quickBooksStatus.hasAccessToken ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.hasAccessToken ? 'Yes' : 'No'}</span></div>
+                       <div>Has Realm ID: <span className={quickBooksStatus.hasRealmId ? 'text-green-300' : 'text-red-300'}>{quickBooksStatus.hasRealmId ? 'Yes' : 'No'}</span></div>
+                       <div>Realm ID: <span className="text-blue-300">{quickBooksStatus.realmId || 'None'}</span></div>
+                       <div>Last Check: <span className="text-blue-300">{new Date(quickBooksStatus.timestamp).toLocaleTimeString()}</span></div>
+                     </div>
+                   </div>
+                 )} */}
                 
                 {connectionError && (
                   <div className="bg-red-500/20 backdrop-blur-sm border border-red-400/30 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 text-left">
@@ -238,16 +238,16 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
       
       <Header isConnected={isQuickBooksConnected} />
       
-      {/* Success notification */}
-      <div className="bg-gradient-to-r from-emerald-500/20 to-green-500/20 backdrop-blur-sm border-l-4 border-emerald-400 p-3 sm:p-4 mb-3 sm:mb-4 mx-3 sm:mx-4 rounded-r-xl relative z-10">
-        <div className="flex items-center">
-          <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 mr-2 sm:mr-3 animate-bounce" />
-          <p className="text-emerald-100 font-semibold text-sm sm:text-base">
-            ✨ Successfully connected to QuickBooks Online!
-          </p>
-          <span className="ml-2 text-emerald-400">📈</span>
-        </div>
-      </div>
+             {/* Success notification - Commented out for production */}
+       {/* <div className="bg-gradient-to-r from-emerald-500/20 to-green-500/20 backdrop-blur-sm border-l-4 border-emerald-400 p-3 sm:p-4 mb-3 sm:mb-4 mx-3 sm:mx-4 rounded-r-xl relative z-10">
+         <div className="flex items-center">
+           <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 mr-2 sm:mr-3 animate-bounce" />
+           <p className="text-emerald-100 font-semibold text-sm sm:text-base">
+             ✨ Successfully connected to QuickBooks Online!
+           </p>
+           <span className="ml-2 text-emerald-400">📈</span>
+         </div>
+       </div> */}
       
       {/* Main responsive layout - stacks vertically on mobile, side-by-side on larger screens */}
       <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 p-3 sm:p-6 relative z-10 min-h-0">
@@ -265,10 +265,10 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
         </div>
       </div>
 
-      {/* Session Info Panel - Debug/Development Only */}
-      <div className="p-3 sm:p-6 relative z-10">
-        <SessionInfo />
-      </div>
+             {/* Session Info Panel - Debug/Development Only - Commented out for production */}
+       {/* <div className="p-3 sm:p-6 relative z-10">
+         <SessionInfo />
+       </div> */}
     </div>
   )
 } 

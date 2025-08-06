@@ -1,15 +1,62 @@
 'use client'
 
-import { getInvoiceStats, formatCurrency } from '../lib/mock-data'
+import { useState, useEffect } from 'react'
+import { formatCurrency } from '../lib/mock-data'
 import { useAuth } from './AuthContext'
 
 interface HeaderProps {
   isConnected?: boolean
 }
 
+interface InvoiceStats {
+  totalInvoices: number
+  totalRevenue: number
+  paidCount: number
+  unpaidCount: number
+  overdueCount: number
+}
+
 export function Header({ isConnected = false }: HeaderProps) {
-  const stats = getInvoiceStats()
+  const [stats, setStats] = useState<InvoiceStats>({
+    totalInvoices: 0,
+    totalRevenue: 0,
+    paidCount: 0,
+    unpaidCount: 0,
+    overdueCount: 0
+  })
+  const [loading, setLoading] = useState(false)
   const { signOut } = useAuth()
+
+  // Fetch real invoice stats when connected
+  useEffect(() => {
+    if (isConnected) {
+      fetchInvoiceStats()
+    }
+  }, [isConnected])
+
+  const fetchInvoiceStats = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/ai/invoices')
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        const invoices = result.data
+        const stats = {
+          totalInvoices: invoices.length,
+          totalRevenue: invoices.reduce((sum: number, inv: any) => sum + (inv.totalAmount || 0), 0),
+          paidCount: invoices.filter((inv: any) => inv.balance === 0).length,
+          unpaidCount: invoices.filter((inv: any) => inv.balance > 0 && inv.status !== 'overdue').length,
+          overdueCount: invoices.filter((inv: any) => inv.status === 'overdue').length
+        }
+        setStats(stats)
+      }
+    } catch (error) {
+      console.error('Error fetching invoice stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSignOut = async () => {
     await signOut()
@@ -68,28 +115,38 @@ export function Header({ isConnected = false }: HeaderProps) {
           </div>
         </div>
 
-        {/* Stats Display (when connected) - Dynamic values from mock invoices */}
+        {/* Stats Display (when connected) - Dynamic values from QuickBooks */}
         {isConnected && (
           <div className="mt-4 sm:mt-6 flex items-center justify-center bg-white/5 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border border-white/10">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8 w-full sm:w-auto">
               <div className="text-center">
-                <div className="text-lg sm:text-2xl font-bold text-white">{stats.totalInvoices}</div>
+                <div className="text-lg sm:text-2xl font-bold text-white">
+                  {loading ? '...' : stats.totalInvoices}
+                </div>
                 <div className="text-white/60 text-xs sm:text-sm">Total Invoices</div>
               </div>
               <div className="text-center">
-                <div className="text-lg sm:text-2xl font-bold text-emerald-400">{formatCurrency(stats.totalRevenue)}</div>
+                <div className="text-lg sm:text-2xl font-bold text-emerald-400">
+                  {loading ? '...' : formatCurrency(stats.totalRevenue)}
+                </div>
                 <div className="text-white/60 text-xs sm:text-sm">Total Revenue</div>
               </div>
               <div className="text-center col-span-2 sm:col-span-1">
-                <div className="text-lg sm:text-2xl font-bold text-blue-400">{stats.paidCount}</div>
+                <div className="text-lg sm:text-2xl font-bold text-blue-400">
+                  {loading ? '...' : stats.paidCount}
+                </div>
                 <div className="text-white/60 text-xs sm:text-sm">Paid</div>
               </div>
               <div className="text-center">
-                <div className="text-lg sm:text-2xl font-bold text-amber-400">{stats.unpaidCount}</div>
+                <div className="text-lg sm:text-2xl font-bold text-amber-400">
+                  {loading ? '...' : stats.unpaidCount}
+                </div>
                 <div className="text-white/60 text-xs sm:text-sm">Unpaid</div>
               </div>
               <div className="text-center">
-                <div className="text-lg sm:text-2xl font-bold text-red-400">{stats.overdueCount}</div>
+                <div className="text-lg sm:text-2xl font-bold text-red-400">
+                  {loading ? '...' : stats.overdueCount}
+                </div>
                 <div className="text-white/60 text-xs sm:text-sm">Overdue</div>
               </div>
             </div>

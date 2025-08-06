@@ -201,17 +201,42 @@ export const invoiceTools = {
     parameters: invoiceSearchSchema,
     execute: async (params: any) => {
       try {
-        const invoices = mockInvoices.filter(i =>
-          (!params.customerId || i.customerId === params.customerId) &&
-          (!params.startDate || i.txnDate >= params.startDate) &&
-          (!params.endDate || i.txnDate <= params.endDate) &&
-          (!params.status || (i.balance === 0 ? 'paid' : i.dueDate && new Date(i.dueDate) < new Date()) === params.status))
-          .slice(params.offset || 0, (params.limit || 20) + (params.offset || 0));
+        // Fetch real invoice data from the API
+        const response = await fetch('/api/ai/invoices');
+        const result = await response.json();
+        
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to fetch invoices'
+          };
+        }
+
+        let invoices = result.data || [];
+        
+        // Apply filters
+        if (params.customerId) {
+          invoices = invoices.filter((i: any) => i.customerId === params.customerId);
+        }
+        if (params.startDate) {
+          invoices = invoices.filter((i: any) => i.txnDate >= params.startDate);
+        }
+        if (params.endDate) {
+          invoices = invoices.filter((i: any) => i.txnDate <= params.endDate);
+        }
+        if (params.status && params.status !== 'all') {
+          invoices = invoices.filter((i: any) => i.status === params.status);
+        }
+        
+        // Apply pagination
+        const offset = params.offset || 0;
+        const limit = params.limit || 20;
+        const paginatedInvoices = invoices.slice(offset, offset + limit);
         
         return {
           success: true,
           data: {
-            invoices: invoices.map((invoice: any) => ({
+            invoices: paginatedInvoices.map((invoice: any) => ({
               id: invoice.id,
               docNumber: invoice.docNumber,
               txnDate: invoice.txnDate,
@@ -219,11 +244,11 @@ export const invoiceTools = {
               totalAmount: invoice.totalAmount,
               balance: invoice.balance,
               customer: invoice.customer,
-              status: invoice.balance === 0 ? 'paid' : 
-                     (invoice.dueDate && new Date(invoice.dueDate) < new Date()) ? 'overdue' : 'unpaid'
+              status: invoice.status
             })),
-            count: invoices.length,
-            hasMore: invoices.length === (params.limit || 20)
+            count: paginatedInvoices.length,
+            totalCount: invoices.length,
+            hasMore: offset + limit < invoices.length
           }
         };
       } catch (error: any) {
@@ -457,9 +482,20 @@ export const invoiceTools = {
     parameters: dateRangeSchema,
     execute: async (params: any) => {
       try {
+        // Fetch real invoice data from the API
+        const response = await fetch('/api/ai/invoices');
+        const result = await response.json();
+        
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to fetch invoices'
+          };
+        }
+
         const dateRange = getDateRange(params.period, params.startDate, params.endDate);
         
-        const invoices = mockInvoices.filter(i =>
+        const invoices = (result.data || []).filter((i: any) =>
           i.txnDate >= dateRange.start &&
           i.txnDate <= dateRange.end
         );

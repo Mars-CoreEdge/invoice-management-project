@@ -104,6 +104,15 @@ export class QuickBooksService {
     return this.accessToken;
   }
 
+  /**
+   * Set tokens manually (for session management)
+   */
+  setTokens(refreshToken: string, realmId: string, userId: string): void {
+    this.refreshToken = refreshToken;
+    this.realmId = realmId;
+    this.userId = userId;
+  }
+
   getRealmId(): string | null {
     return this.realmId;
   }

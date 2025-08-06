@@ -79,11 +79,12 @@ export function QuickBooksIntegration() {
     setError(null)
     
     try {
-      const response = await fetch('/api/auth/quickbooks/status')
-      const result = await response.json()
+      // Check QuickBooks connection status
+      const statusResponse = await fetch('/api/auth/quickbooks/status')
+      const statusResult = await statusResponse.json()
       
-      if (result.success) {
-        const status = result.status
+      if (statusResult.success) {
+        const status = statusResult.status
         setQuickBooksStatus({
           connected: status.isAuthenticated,
           companyName: status.companyName,
@@ -96,7 +97,7 @@ export function QuickBooksIntegration() {
           fetchInvoices()
         }
       } else {
-        setError(result.error || 'Failed to check QuickBooks status')
+        setError(statusResult.error || 'Failed to check QuickBooks status')
       }
     } catch (err: any) {
       console.error('Error checking QuickBooks status:', err)
@@ -243,16 +244,17 @@ export function QuickBooksIntegration() {
                 Disconnect
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-white/60">Company:</span>
-                <p className="text-white">{quickBooksStatus.companyName || 'Unknown'}</p>
-              </div>
-              <div>
-                <span className="text-white/60">Realm ID:</span>
-                <p className="text-white font-mono">{quickBooksStatus.realmId || 'Unknown'}</p>
-              </div>
-            </div>
+                         {/* Connection details */}
+             <div className="grid grid-cols-2 gap-4 text-sm">
+               <div>
+                 <span className="text-white/60">Company:</span>
+                 <p className="text-white">{quickBooksStatus.companyName || 'Unknown'}</p>
+               </div>
+               <div>
+                 <span className="text-white/60">Realm ID:</span>
+                 <p className="text-white font-mono">{quickBooksStatus.realmId || 'Unknown'}</p>
+               </div>
+             </div>
           </div>
 
           {/* Invoices Section */}

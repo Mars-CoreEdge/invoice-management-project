@@ -44,7 +44,7 @@ export class QuickBooksTokenManager {
       const encryptedAccessToken = TokenEncryption.encrypt(accessToken, this.encryptionKey);
       const encryptedRefreshToken = TokenEncryption.encrypt(refreshToken, this.encryptionKey);
 
-      console.log(`Storing tokens for user: ${userId}, realm: ${realmId}`);
+      // console.log(`Storing tokens for user: ${userId}, realm: ${realmId}`);
 
       // First, check if tokens already exist for this user
       const { data: existingTokens, error: checkError } = await supabase
@@ -54,12 +54,12 @@ export class QuickBooksTokenManager {
         .single();
 
       if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking existing tokens:', checkError);
+        // console.error('Error checking existing tokens:', checkError);
         throw new Error(`Failed to check existing tokens: ${checkError.message}`);
       }
 
       if (existingTokens) {
-        console.log(`Updating existing tokens for user: ${userId}`);
+        // console.log(`Updating existing tokens for user: ${userId}`);
         // Update existing record
         const { error: updateError } = await supabase
           .from('quickbooks_tokens')
@@ -72,11 +72,11 @@ export class QuickBooksTokenManager {
           .eq('user_id', userId);
 
         if (updateError) {
-          console.error('Error updating QuickBooks tokens:', updateError);
+          // console.error('Error updating QuickBooks tokens:', updateError);
           throw new Error(`Failed to update tokens: ${updateError.message}`);
         }
       } else {
-        console.log(`Creating new tokens for user: ${userId}`);
+        // console.log(`Creating new tokens for user: ${userId}`);
         // Insert new record
         const { error: insertError } = await supabase
           .from('quickbooks_tokens')
@@ -89,12 +89,12 @@ export class QuickBooksTokenManager {
           });
 
         if (insertError) {
-          console.error('Error inserting QuickBooks tokens:', insertError);
+          // console.error('Error inserting QuickBooks tokens:', insertError);
           throw new Error(`Failed to insert tokens: ${insertError.message}`);
         }
       }
 
-      console.log(`QuickBooks tokens stored successfully for user: ${userId}`);
+      // console.log(`QuickBooks tokens stored successfully for user: ${userId}`);
     } catch (error) {
       console.error('Error in storeTokens:', error);
       throw error;

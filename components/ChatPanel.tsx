@@ -27,7 +27,7 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
     {
         id: 'welcome',
       role: 'assistant',
-        content: '👋 Hello! I\'m your AI Business Assistant ready to help!\n\n🎯 **What I can help you with:**\n\n• **Invoice Management** - View and analyze your 4 sample invoices\n• **Business Calculations** - Percentages, profit margins, ROI calculations\n• **Business Advice** - Cash flow, payment terms, collection strategies\n• **General Questions** - Business concepts and best practices\n\n💬 **Try asking me:**\n- "Show me my invoices"\n- "Calculate 15% of 5000"\n- "How can I improve cash flow?"\n- "What are good payment terms?"\n\nI understand natural language - just type your question below! 👇'
+        content: '👋 Hello! I\'m your AI Business Assistant ready to help!\n\n🎯 **What I can help you with:**\n\n• **Invoice Management** - View and analyze your QuickBooks invoices\n• **Business Calculations** - Percentages, profit margins, ROI calculations\n• **Business Advice** - Cash flow, payment terms, collection strategies\n• **General Questions** - Business concepts and best practices\n\n💬 **Try asking me:**\n- "Show me my invoices"\n- "Calculate 15% of 5000"\n- "How can I improve cash flow?"\n- "What are good payment terms?"\n\nI understand natural language - just type your question below! 👇'
         }
     ],
     onFinish: (message) => {

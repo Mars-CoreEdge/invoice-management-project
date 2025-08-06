@@ -31,11 +31,6 @@ Key behaviors:
 4. Handle errors gracefully and suggest alternatives
 5. Be proactive in offering related assistance
 
-Current invoice context:
-- 4 invoices totaling $8,450.75
-- 2 paid ($3,450.00), 2 unpaid ($5,000.75)
-- 1 overdue invoice from Global Dynamics ($3,200.75)
-
 Always strive to be helpful, accurate, and business-focused in your responses.`,
       
       // Handle step completion for UI updates

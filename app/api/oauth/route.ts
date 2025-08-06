@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getQuickBooksService } from '@/lib/quickbooks';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
@@ -62,8 +63,19 @@ export async function GET(request: Request) {
     const qbs = getQuickBooksService();
     console.log('QuickBooks service obtained successfully');
     
+    // Get the current user from the session
+    const supabase = createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.log('Authentication error:', authError);
+      return NextResponse.redirect(
+        new URL('/dashboard?error=auth_failed&message=' + encodeURIComponent('User authentication required'), request.url)
+      );
+    }
+    
     console.log('Creating token with QuickBooks...');
-    await qbs.createToken(code, realmId);
+    await qbs.createToken(code, realmId, user.id);
     console.log('Token created successfully');
     
     // Get the QBO session object

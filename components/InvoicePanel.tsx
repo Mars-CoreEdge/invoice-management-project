@@ -52,7 +52,7 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
     return matchesSearch && matchesFilter
   })
 
-  // Limit to 4 invoices for display
+  // Limit to 4 invoices for display (can be made configurable)
   const displayInvoices = filteredInvoices.slice(0, 4)
 
   // Get invoice statistics from shared function
@@ -86,7 +86,7 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
               {loading ? '⏳' : '🔄'}
             </button>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-2 text-xs sm:text-sm text-white/80 flex-1 sm:flex-none text-center sm:text-left">
-              {displayInvoices.length} of 4 invoices
+              {displayInvoices.length} of {filteredInvoices.length} invoices
             </div>
           </div>
 
@@ -202,7 +202,7 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
         {!loading && filteredInvoices.length > 4 && (
           <div className="text-center pt-3 sm:pt-4">
             <p className="text-white/60 text-xs sm:text-sm">
-              Showing first 4 invoices • {filteredInvoices.length - 4} more available
+              Showing first {displayInvoices.length} invoices • {filteredInvoices.length - displayInvoices.length} more available
             </p>
           </div>
         )}

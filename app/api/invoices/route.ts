@@ -1,37 +1,21 @@
 import { NextResponse } from 'next/server';
-import { getQuickBooksService } from '@/lib/quickbooks';
+import { getQBOSessionManager } from '@/lib/qbo-session';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
-    console.log('=== Fetching invoices from QuickBooks ===');
-    
     const url = new URL(request.url);
     const searchParams = url.searchParams;
     
     // Extract query parameters
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
-    const status = searchParams.get('status') || 'all';
-    const customerId = searchParams.get('customerId') || undefined;
-    const startDate = searchParams.get('startDate') || undefined;
-    const endDate = searchParams.get('endDate') || undefined;
-
-    console.log('Fetching invoices with params:', {
-      limit,
-      offset,
-      status,
-      customerId,
-      startDate,
-      endDate
-    });
 
     // Get the current authenticated user
     const supabase = createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      console.error('Authentication error:', authError);
       return NextResponse.json({
         success: false,
         error: 'Unauthorized',
@@ -40,13 +24,12 @@ export async function GET(request: Request) {
       }, { status: 401 });
     }
 
-    console.log('Authenticated user:', user.id);
-
-    const qbs = getQuickBooksService();
+    const qboSessionManager = getQBOSessionManager();
     
-    // Load tokens for the authenticated user
-    const tokensLoaded = await qbs.loadTokensForUser(user.id);
-    if (!tokensLoaded) {
+    // Get QBO session for the current user
+    const session = await qboSessionManager.getSession(user.id);
+    
+    if (!session) {
       return NextResponse.json({
         success: false,
         error: 'QuickBooks connection required',
@@ -54,35 +37,19 @@ export async function GET(request: Request) {
         requiresAuth: true
       }, { status: 401 });
     }
-    
-    // Build search criteria
-    const criteria: any = {
-      limit,
-      offset
-    };
-    
-    if (status !== 'all') {
-      criteria.status = status;
-    }
-    
-    if (customerId) {
-      criteria.customerId = customerId;
-    }
-    
-    if (startDate) {
-      criteria.startDate = startDate;
-    }
-    
-    if (endDate) {
-      criteria.endDate = endDate;
-    }
 
-    const invoices = await qbs.findInvoices(criteria);
+    // Fetch invoices using the QBO session manager
+    const result = await qboSessionManager.getInvoices(session, limit, offset);
     
-    console.log(`Found ${invoices.length} invoices`);
+    if (!result.success) {
+      return NextResponse.json({
+        success: false,
+        error: result.error || 'Failed to fetch invoices'
+      }, { status: 500 });
+    }
 
     // Transform QuickBooks invoice data to our frontend format
-    const transformedInvoices = invoices.map((invoice: any) => {
+    const transformedInvoices = (result.data || []).map((invoice: any) => {
       const balance = parseFloat(invoice.Balance || 0);
       const totalAmount = parseFloat(invoice.TotalAmt || 0);
       const dueDate = invoice.DueDate;
@@ -103,7 +70,9 @@ export async function GET(request: Request) {
         totalAmount: totalAmount,
         balance: balance,
         customer: invoice.CustomerRef?.name || 'Unknown Customer',
-        status: status
+        status: status,
+        customerRef: invoice.CustomerRef,
+        lineItems: invoice.Line || []
       };
     });
 
