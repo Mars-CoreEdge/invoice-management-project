@@ -181,9 +181,16 @@ export class QuickBooksService {
         throw new Error('No access token received from QuickBooks');
       }
 
-      // Calculate expiration time
+      // Calculate expiration time with proper handling
       const expiresAt = new Date();
-      expiresAt.setSeconds(expiresAt.getSeconds() + (tokenResponse.expires_in || 3600));
+      const expiresIn = tokenResponse.expires_in || 3600; // Default to 1 hour if not provided
+      expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn);
+      
+      console.log('Token expiration calculated:', {
+        expiresIn,
+        expiresAt: expiresAt.toISOString(),
+        currentTime: new Date().toISOString()
+      });
 
       // Store tokens securely in database
       await this.tokenManager.storeTokens(
@@ -272,11 +279,20 @@ export class QuickBooksService {
     }
 
     try {
+      console.log('Refreshing QuickBooks access token...');
+      
       const authResponse = await this.oauthClient.refresh();
       
-      // Calculate new expiration time
+      // Calculate new expiration time with proper handling
       const expiresAt = new Date();
-      expiresAt.setSeconds(expiresAt.getSeconds() + (authResponse.expires_in || 3600));
+      const expiresIn = authResponse.expires_in || 3600; // Default to 1 hour if not provided
+      expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn);
+      
+      console.log('Token refresh successful:', {
+        expiresIn,
+        expiresAt: expiresAt.toISOString(),
+        currentTime: new Date().toISOString()
+      });
 
       // Update tokens in database
       await this.tokenManager.updateTokens(
