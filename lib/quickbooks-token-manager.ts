@@ -40,11 +40,23 @@ export class QuickBooksTokenManager {
     try {
       const supabase = createServerSupabaseClient();
 
+      // Debug: Log the user ID and validate it
+      console.log(`🔍 DEBUG: Attempting to store tokens for user: ${userId}`);
+      console.log(`🔍 DEBUG: User ID type: ${typeof userId}, length: ${userId?.length}`);
+      console.log(`🔍 DEBUG: User ID format valid: ${/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)}`);
+
+      // Validate user ID format
+      if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+        throw new Error(`Invalid user ID format: ${userId}`);
+      }
+
+      console.log(`🔍 DEBUG: User ID format validated successfully`);
+
       // Encrypt sensitive tokens
       const encryptedAccessToken = TokenEncryption.encrypt(accessToken, this.encryptionKey);
       const encryptedRefreshToken = TokenEncryption.encrypt(refreshToken, this.encryptionKey);
 
-      // console.log(`Storing tokens for user: ${userId}, realm: ${realmId}`);
+      console.log(`🔍 DEBUG: Tokens encrypted, checking existing tokens...`);
 
       // First, check if tokens already exist for this user
       const { data: existingTokens, error: checkError } = await supabase
@@ -54,12 +66,12 @@ export class QuickBooksTokenManager {
         .single();
 
       if (checkError && checkError.code !== 'PGRST116') {
-        // console.error('Error checking existing tokens:', checkError);
+        console.error('🔍 DEBUG: Error checking existing tokens:', checkError);
         throw new Error(`Failed to check existing tokens: ${checkError.message}`);
       }
 
       if (existingTokens) {
-        // console.log(`Updating existing tokens for user: ${userId}`);
+        console.log(`🔍 DEBUG: Updating existing tokens for user: ${userId}`);
         // Update existing record
         const { error: updateError } = await supabase
           .from('quickbooks_tokens')
@@ -72,11 +84,11 @@ export class QuickBooksTokenManager {
           .eq('user_id', userId);
 
         if (updateError) {
-          // console.error('Error updating QuickBooks tokens:', updateError);
+          console.error('🔍 DEBUG: Error updating QuickBooks tokens:', updateError);
           throw new Error(`Failed to update tokens: ${updateError.message}`);
         }
       } else {
-        // console.log(`Creating new tokens for user: ${userId}`);
+        console.log(`🔍 DEBUG: Creating new tokens for user: ${userId}`);
         // Insert new record
         const { error: insertError } = await supabase
           .from('quickbooks_tokens')
@@ -89,14 +101,20 @@ export class QuickBooksTokenManager {
           });
 
         if (insertError) {
-          // console.error('Error inserting QuickBooks tokens:', insertError);
+          console.error('🔍 DEBUG: Error inserting QuickBooks tokens:', insertError);
+          console.error('🔍 DEBUG: Insert error details:', {
+            code: insertError.code,
+            message: insertError.message,
+            details: insertError.details,
+            hint: insertError.hint
+          });
           throw new Error(`Failed to insert tokens: ${insertError.message}`);
         }
       }
 
-      // console.log(`QuickBooks tokens stored successfully for user: ${userId}`);
+      console.log(`✅ DEBUG: QuickBooks tokens stored successfully for user: ${userId}`);
     } catch (error) {
-      console.error('Error in storeTokens:', error);
+      console.error('❌ DEBUG: Error in storeTokens:', error);
       throw error;
     }
   }
