@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTeamService } from '../../../../lib/team-service';
-import { getUserIdFromRequest } from '../../../../lib/utils';
-import { Team } from '../../../../types/teams';
+import { getUserIdFromRequest } from '@/lib/server-utils';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(
   request: NextRequest,
@@ -13,26 +12,41 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const supabase = createServerSupabaseClient();
     
-    // Check if user has access to this team
-    const hasAccess = await teamService.checkUserRole(userId, params.teamId);
-    if (!hasAccess.is_member) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    // Check if user is a member of the team
+    const { data: membership, error: membershipError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', params.teamId)
+      .eq('user_id', userId)
+      .single();
+
+    if (membershipError || !membership) {
+      return NextResponse.json({ error: 'Team not found or access denied' }, { status: 404 });
     }
 
-    const team = await teamService.getTeam(params.teamId);
-    if (!team) {
+    // Get team details
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('id', params.teamId)
+      .single();
+
+    if (teamError || !team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ team });
+    return NextResponse.json({ 
+      team: {
+        ...team,
+        is_owner: team.owner_id === userId,
+        role: membership.role
+      }
+    });
   } catch (error) {
-    console.error('Error getting team:', error);
-    return NextResponse.json(
-      { error: 'Failed to get team' },
-      { status: 500 }
-    );
+    console.error('Error in GET /api/teams/[teamId]:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -46,46 +60,46 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const { team_name, description } = await request.json();
     
-    // Check if user is admin of this team
-    const hasPermission = await teamService.checkUserPermission(
-      userId, 
-      params.teamId, 
-      'can_manage_team'
-    );
+    const supabase = createServerSupabaseClient();
     
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    // Check if user is the team owner
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('owner_id')
+      .eq('id', params.teamId)
+      .single();
+
+    if (teamError || !team) {
+      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    const body: Partial<Pick<Team, 'team_name' | 'description'>> = await request.json();
-    
-    if (body.team_name !== undefined && body.team_name.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Team name cannot be empty' },
-        { status: 400 }
-      );
+    if (team.owner_id !== userId) {
+      return NextResponse.json({ error: 'Only team owner can update team' }, { status: 403 });
     }
 
-    const success = await teamService.updateTeam(params.teamId, body);
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Failed to update team' },
-        { status: 500 }
-      );
+    // Update the team
+    const { data: updatedTeam, error: updateError } = await supabase
+      .from('teams')
+      .update({
+        team_name,
+        description,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', params.teamId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating team:', updateError);
+      return NextResponse.json({ error: 'Failed to update team' }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true,
-      message: 'Team updated successfully' 
-    });
+    return NextResponse.json({ team: updatedTeam });
   } catch (error) {
-    console.error('Error updating team:', error);
-    return NextResponse.json(
-      { error: 'Failed to update team' },
-      { status: 500 }
-    );
+    console.error('Error in PUT /api/teams/[teamId]:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -99,31 +113,37 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const supabase = createServerSupabaseClient();
     
     // Check if user is the team owner
-    const isOwner = await teamService.isTeamOwner(userId, params.teamId);
-    if (!isOwner) {
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('owner_id')
+      .eq('id', params.teamId)
+      .single();
+
+    if (teamError || !team) {
+      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+    }
+
+    if (team.owner_id !== userId) {
       return NextResponse.json({ error: 'Only team owner can delete team' }, { status: 403 });
     }
 
-    const success = await teamService.deleteTeam(params.teamId);
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Failed to delete team' },
-        { status: 500 }
-      );
+    // Delete the team (this will cascade delete members and invitations)
+    const { error: deleteError } = await supabase
+      .from('teams')
+      .delete()
+      .eq('id', params.teamId);
+
+    if (deleteError) {
+      console.error('Error deleting team:', deleteError);
+      return NextResponse.json({ error: 'Failed to delete team' }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true,
-      message: 'Team deleted successfully' 
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting team:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete team' },
-      { status: 500 }
-    );
+    console.error('Error in DELETE /api/teams/[teamId]:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

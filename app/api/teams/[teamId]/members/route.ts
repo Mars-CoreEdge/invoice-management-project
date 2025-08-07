@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTeamService } from '../../../../../lib/team-service';
-import { getUserIdFromRequest } from '../../../../../lib/utils';
-import { InviteUserRequest, TeamRole } from '../../../../../types/teams';
+import { getUserIdFromRequest } from '@/lib/server-utils';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(
   request: NextRequest,
@@ -13,22 +12,55 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const supabase = createServerSupabaseClient();
     
-    // Check if user has access to this team
-    const hasAccess = await teamService.checkUserRole(userId, params.teamId);
-    if (!hasAccess.is_member) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    // Check if user is a member of the team
+    const { data: membership, error: membershipError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', params.teamId)
+      .eq('user_id', userId)
+      .single();
+
+    if (membershipError || !membership) {
+      return NextResponse.json({ error: 'Team not found or access denied' }, { status: 404 });
     }
 
-    const members = await teamService.getTeamMembers(params.teamId);
-    return NextResponse.json({ members });
+    // Get team members
+    const { data: members, error: membersError } = await supabase
+      .from('team_members')
+      .select(`
+        user_id,
+        role,
+        joined_at,
+        invited_by,
+        auth.users (
+          email,
+          raw_user_meta_data
+        )
+      `)
+      .eq('team_id', params.teamId);
+
+    if (membersError) {
+      console.error('Error fetching team members:', membersError);
+      return NextResponse.json({ error: 'Failed to fetch team members' }, { status: 500 });
+    }
+
+    // Transform the data
+    const transformedMembers = members?.map(member => ({
+      team_id: params.teamId,
+      user_id: member.user_id,
+      role: member.role,
+      joined_at: member.joined_at,
+      invited_by: member.invited_by,
+      email: member.auth?.users?.email,
+      full_name: member.auth?.users?.raw_user_meta_data?.full_name
+    })) || [];
+
+    return NextResponse.json({ members: transformedMembers });
   } catch (error) {
-    console.error('Error getting team members:', error);
-    return NextResponse.json(
-      { error: 'Failed to get team members' },
-      { status: 500 }
-    );
+    console.error('Error in GET /api/teams/[teamId]/members:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -42,68 +74,48 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const { email, role } = await request.json();
     
-    // Check if user can invite others
-    const hasPermission = await teamService.checkUserPermission(
-      userId, 
-      params.teamId, 
-      'can_invite_users'
-    );
+    if (!email || !role) {
+      return NextResponse.json({ error: 'Email and role are required' }, { status: 400 });
+    }
+
+    const supabase = createServerSupabaseClient();
     
-    if (!hasPermission) {
+    // Check if user is admin of the team
+    const { data: membership, error: membershipError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', params.teamId)
+      .eq('user_id', userId)
+      .single();
+
+    if (membershipError || !membership || membership.role !== 'admin') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const body: InviteUserRequest = await request.json();
-    
-    if (!body.email || !body.email.trim()) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      );
+    // Create invitation
+    const { data: invitation, error: invitationError } = await supabase
+      .from('team_invitations')
+      .insert({
+        team_id: params.teamId,
+        email,
+        role,
+        invited_by: userId,
+        token: crypto.randomUUID(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+      })
+      .select()
+      .single();
+
+    if (invitationError) {
+      console.error('Error creating invitation:', invitationError);
+      return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
-
-    // Validate role
-    if (body.role && !['admin', 'accountant', 'viewer'].includes(body.role)) {
-      return NextResponse.json(
-        { error: 'Invalid role' },
-        { status: 400 }
-      );
-    }
-
-    const invitationToken = await teamService.inviteUser({
-      team_id: params.teamId,
-      email: body.email,
-      role: body.role
-    });
-
-    if (!invitationToken) {
-      return NextResponse.json(
-        { error: 'Failed to invite user' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ 
-      success: true,
-      invitation_token: invitationToken,
-      message: 'User invited successfully' 
-    });
+    return NextResponse.json({ invitation });
   } catch (error) {
-    console.error('Error inviting user:', error);
-    return NextResponse.json(
-      { error: 'Failed to invite user' },
-      { status: 500 }
-    );
+    console.error('Error in POST /api/teams/[teamId]/members:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTeamService } from '../../../../../../lib/team-service';
-import { getUserIdFromRequest } from '../../../../../../lib/utils';
-import { TeamRole } from '../../../../../../types/teams';
+import { getUserIdFromRequest } from '@/lib/server-utils';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function PUT(
   request: NextRequest,
@@ -13,67 +12,44 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const { role } = await request.json();
     
-    // Check if user can change roles
-    const hasPermission = await teamService.checkUserPermission(
-      currentUserId, 
-      params.teamId, 
-      'can_change_roles'
-    );
+    if (!role || !['admin', 'accountant', 'viewer'].includes(role)) {
+      return NextResponse.json({ error: 'Valid role is required' }, { status: 400 });
+    }
+
+    const supabase = createServerSupabaseClient();
     
-    if (!hasPermission) {
+    // Check if current user is admin of the team
+    const { data: membership, error: membershipError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', params.teamId)
+      .eq('user_id', currentUserId)
+      .single();
+
+    if (membershipError || !membership || membership.role !== 'admin') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const body: { role: TeamRole } = await request.json();
-    
-    if (!body.role || !['admin', 'accountant', 'viewer'].includes(body.role)) {
-      return NextResponse.json(
-        { error: 'Valid role is required' },
-        { status: 400 }
-      );
+    // Update member role
+    const { data: updatedMember, error: updateError } = await supabase
+      .from('team_members')
+      .update({ role })
+      .eq('team_id', params.teamId)
+      .eq('user_id', params.userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating member role:', updateError);
+      return NextResponse.json({ error: 'Failed to update member role' }, { status: 500 });
     }
 
-    // Prevent demoting the last admin
-    if (body.role !== 'admin') {
-      const currentRole = await teamService.getUserRole(params.userId, params.teamId);
-      if (currentRole === 'admin') {
-        const adminCount = await teamService.getTeamMembers(params.teamId)
-          .then(members => members.filter(m => m.role === 'admin').length);
-        
-        if (adminCount <= 1) {
-          return NextResponse.json(
-            { error: 'Cannot demote the last admin' },
-            { status: 400 }
-          );
-        }
-      }
-    }
-
-    const success = await teamService.updateMemberRole(
-      params.teamId, 
-      params.userId, 
-      body.role
-    );
-
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Failed to update member role' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ 
-      success: true,
-      message: 'Member role updated successfully' 
-    });
+    return NextResponse.json({ member: updatedMember });
   } catch (error) {
-    console.error('Error updating member role:', error);
-    return NextResponse.json(
-      { error: 'Failed to update member role' },
-      { status: 500 }
-    );
+    console.error('Error in PUT /api/teams/[teamId]/members/[userId]:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -87,59 +63,50 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const supabase = createServerSupabaseClient();
     
-    // Check if user can remove members
-    const hasPermission = await teamService.checkUserPermission(
-      currentUserId, 
-      params.teamId, 
-      'can_remove_users'
-    );
-    
-    if (!hasPermission) {
+    // Check if current user is admin of the team
+    const { data: membership, error: membershipError } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('team_id', params.teamId)
+      .eq('user_id', currentUserId)
+      .single();
+
+    if (membershipError || !membership || membership.role !== 'admin') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    // Prevent removing the last admin
-    const memberRole = await teamService.getUserRole(params.userId, params.teamId);
-    if (memberRole === 'admin') {
-      const adminCount = await teamService.getTeamMembers(params.teamId)
-        .then(members => members.filter(m => m.role === 'admin').length);
-      
-      if (adminCount <= 1) {
-        return NextResponse.json(
-          { error: 'Cannot remove the last admin' },
-          { status: 400 }
-        );
-      }
+    // Check if trying to remove team owner
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('owner_id')
+      .eq('id', params.teamId)
+      .single();
+
+    if (teamError || !team) {
+      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    // Prevent removing yourself
-    if (params.userId === currentUserId) {
-      return NextResponse.json(
-        { error: 'Cannot remove yourself from the team' },
-        { status: 400 }
-      );
+    if (team.owner_id === params.userId) {
+      return NextResponse.json({ error: 'Cannot remove team owner' }, { status: 400 });
     }
 
-    const success = await teamService.removeMember(params.teamId, params.userId);
+    // Remove member
+    const { error: deleteError } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('team_id', params.teamId)
+      .eq('user_id', params.userId);
 
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Failed to remove member' },
-        { status: 500 }
-      );
+    if (deleteError) {
+      console.error('Error removing member:', deleteError);
+      return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true,
-      message: 'Member removed successfully' 
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error removing member:', error);
-    return NextResponse.json(
-      { error: 'Failed to remove member' },
-      { status: 500 }
-    );
+    console.error('Error in DELETE /api/teams/[teamId]/members/[userId]:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

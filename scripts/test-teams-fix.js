@@ -1,0 +1,23 @@
+const fs = require('fs');
+const path = require('path');
+
+console.log('=== Team RLS Policies Fix - Test Instructions ===');
+console.log('\n1. First, apply the SQL fix from the previous script');
+console.log('2. Then test the teams API with these curl commands:');
+console.log('\n--- Test GET /api/teams ---');
+console.log('curl -X GET http://localhost:3003/api/teams \\');
+console.log('  -H "Authorization: Bearer YOUR_SUPABASE_ANON_KEY" \\');
+console.log('  -H "Content-Type: application/json"');
+console.log('\n--- Test POST /api/teams ---');
+console.log('curl -X POST http://localhost:3003/api/teams \\');
+console.log('  -H "Authorization: Bearer YOUR_SUPABASE_ANON_KEY" \\');
+console.log('  -H "Content-Type: application/json" \\');
+console.log('  -d \'{"team_name": "Test Team", "description": "Test team description"}\'');
+console.log('\n=== Expected Results ===');
+console.log('- GET should return: {"teams": []} (empty array if no teams)');
+console.log('- POST should return: {"team": {...}} (new team object)');
+console.log('- No more "infinite recursion" errors');
+console.log('\n=== If Still Getting Errors ===');
+console.log('1. Check Supabase logs for any remaining policy issues');
+console.log('2. Verify the SQL was executed successfully');
+console.log('3. Try refreshing the page and testing again');
