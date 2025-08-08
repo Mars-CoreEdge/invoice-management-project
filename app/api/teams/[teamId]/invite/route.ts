@@ -54,9 +54,21 @@ export async function POST(
       )
     }
 
-    // TODO: Send email invitation (implement email service)
-    // For now, we'll just return success
-    console.log(`Invitation sent to ${email} for team ${teamId} with token: ${invitationToken}`)
+    // Send email invitation
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/teams/invitations/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          role,
+          teamId,
+          token: invitationToken
+        })
+      })
+    } catch (e) {
+      console.warn('Invite email send failed non-blocking:', e)
+    }
 
     return NextResponse.json({
       success: true,

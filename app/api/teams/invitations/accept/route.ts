@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTeamService } from '../../../../../lib/team-service';
-import { getUserIdFromRequest } from '../../../../../lib/utils';
+import { getTeamService } from '@/lib/team-service';
+import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server';
 import { AcceptInvitationRequest } from '../../../../../types/teams';
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = await createSupabaseForRequest(request as any)
+    const { data: { user } } = await getAuthenticatedUser(request as any)
+    if (!user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body: AcceptInvitationRequest = await request.json();
     
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const teamService = getTeamService();
+    const teamService = getTeamService(supabase);
     const teamId = await teamService.acceptInvitation(body);
 
     if (!teamId) {

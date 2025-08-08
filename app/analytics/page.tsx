@@ -47,14 +47,34 @@ export default function AnalyticsPage() {
 
   const fetchAnalytics = async () => {
     try {
-      // Mock analytics data for demonstration
+      // Pull invoices for current team and compute metrics client-side
+      const res = await fetch(`/api/invoices?teamId=${currentTeam?.team_id}`)
+      const json = await res.json()
+      const invoices = Array.isArray(json.data) ? json.data : []
+console.log(invoices)
+      // Filter by time range
+      const now = new Date()
+      const cutoff = new Date(
+        timeRange === '7d' ? now.getTime() - 7*86400000 :
+        timeRange === '30d' ? now.getTime() - 30*86400000 :
+        timeRange === '90d' ? now.getTime() - 90*86400000 :
+        now.getTime() - 365*86400000
+      )
+
+      const rangeInvoices = invoices.filter((i: any) => new Date(i.created_at) >= cutoff)
+      const totalRevenue = rangeInvoices.reduce((s: number, i: any) => s + Number(i.total_amount||0), 0)
+      const paid = rangeInvoices.filter((i: any) => Number(i.balance) === 0)
+      const overdue = rangeInvoices.filter((i: any) => i.status === 'overdue')
+      const pending = rangeInvoices.filter((i: any) => i.status === 'pending' || (Number(i.balance) > 0 && i.status !== 'overdue'))
+
+      const avg = rangeInvoices.length ? totalRevenue / rangeInvoices.length : 0
       const mockData: AnalyticsData = {
         totalInvoices: 156,
-        totalRevenue: 125000,
-        paidInvoices: 89,
-        pendingInvoices: 45,
-        overdueInvoices: 22,
-        averageInvoiceValue: 801.28,
+        totalRevenue: Number(totalRevenue.toFixed(2)),
+        paidInvoices: paid.length,
+        pendingInvoices: pending.length,
+        overdueInvoices: overdue.length,
+        averageInvoiceValue: Number(avg.toFixed(2)),
         monthlyGrowth: 12.5,
         topCustomers: [
           { name: 'Acme Corporation', total: 25000, count: 8 },

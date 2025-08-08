@@ -33,8 +33,10 @@ interface Invoice {
 }
 
 export function QuickBooksIntegration() {
-  const { user } = useAuth()
-  const { currentTeam } = useTeam()
+  const auth: any = useAuth() as any
+  const teamCtx: any = useTeam() as any
+  const user = auth?.user
+  const currentTeam = teamCtx?.currentTeam
   const [quickBooksStatus, setQuickBooksStatus] = useState<QuickBooksStatus | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(false)
@@ -81,17 +83,17 @@ export function QuickBooksIntegration() {
     setError(null)
     
     try {
-      // Check QuickBooks connection status
-      const statusResponse = await fetch('/api/auth/quickbooks/status')
+      // Check QuickBooks connection status (includes companyName)
+      const statusResponse = await fetch('/api/quickbooks/status', { cache: 'no-store' })
       const statusResult = await statusResponse.json()
       
       if (statusResult.success) {
-        const status = statusResult.status
+        const status = statusResult.status || statusResult
         setQuickBooksStatus({
-          connected: status.isAuthenticated,
+          connected: !!(status.isAuthenticated ?? status.connected),
           companyName: status.companyName,
           realmId: status.realmId,
-          message: status.isAuthenticated ? 'Connected to QuickBooks' : 'Not connected'
+          message: (status.isAuthenticated ?? status.connected) ? 'Connected to QuickBooks' : 'Not connected'
         })
         
         if (status.isAuthenticated) {
@@ -122,29 +124,20 @@ export function QuickBooksIntegration() {
     setError(null)
     
     try {
-      if (!currentTeam) {
-        throw new Error('No team selected')
-      }
-      const response = await fetch(`/api/invoices?teamId=${currentTeam.team_id}`)
+      // Pull invoices directly from QuickBooks (server will use current user's tokens)
+      const response = await fetch('/api/invoices/qbo', { cache: 'no-store' })
       const result = await response.json()
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch invoices')
       }
       
-      // Map API invoice shape to UI invoice shape expected here
-      const mapped: Invoice[] = (result.data || []).map((inv: any) => ({
-        id: inv.id,
-        docNumber: inv.invoice_number,
-        customerRef: { value: inv.customer_name, name: inv.customer_name },
-        totalAmount: inv.total_amount,
-        balance: inv.balance,
-        dueDate: inv.due_date,
-        txnDate: inv.created_at,
-        status: inv.balance === 0 ? 'paid' : inv.status === 'overdue' ? 'overdue' : 'unpaid',
-        lineItems: [],
-      }))
-      setInvoices(mapped)
+      const items = Array.isArray(result.data) ? result.data : []
+      setInvoices(items)
+      // If backend returned companyName, reflect it
+      if (result.companyName) {
+        setQuickBooksStatus(prev => prev ? { ...prev, companyName: result.companyName } : prev)
+      }
       console.log('✅ Fetched invoices:', result.data.length)
       
     } catch (err: any) {

@@ -1,4 +1,4 @@
-export type TeamRole = 'admin' | 'accountant' | 'viewer';
+export type TeamRole = 'admin' | 'accountant' | 'viewer' | 'assistant';
 
 export interface Team {
   id: string;
@@ -81,6 +81,18 @@ export const ROLE_PERMISSIONS = {
     can_edit_invoices: true,
     can_delete_invoices: false,
     can_manage_quickbooks: true,
+    can_use_ai_tools: true,
+  },
+  assistant: {
+    can_manage_team: false,
+    can_invite_users: false,
+    can_remove_users: false,
+    can_change_roles: false,
+    can_delete_team: false,
+    can_view_invoices: true,
+    can_edit_invoices: false,
+    can_delete_invoices: false,
+    can_manage_quickbooks: false,
     can_use_ai_tools: true,
   },
   viewer: {

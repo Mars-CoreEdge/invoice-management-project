@@ -5,19 +5,7 @@ import { useTeam } from '@/components/TeamContext'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { 
-  FileText, 
-  Plus, 
-  Search, 
-  Filter,
-  Download,
-  Eye,
-  Edit,
-  Trash2,
-  DollarSign,
-  Calendar,
-  User
-} from 'lucide-react'
+import * as Icons from 'lucide-react'
 
 interface Invoice {
   id: string
@@ -32,7 +20,10 @@ interface Invoice {
 }
 
 export default function InvoicesPage() {
-  const { currentTeam, canEditInvoices, canDeleteInvoices } = useTeam()
+  const team: any = useTeam() as any
+  const currentTeam = team?.currentTeam
+  const canEditInvoices = team?.canEditInvoices
+  const canDeleteInvoices = team?.canDeleteInvoices
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -60,6 +51,8 @@ export default function InvoicesPage() {
       setLoading(false)
     }
   }
+
+  // removed duplicate handleDelete
 
   const filteredInvoices = invoices
     .filter(invoice => {
@@ -102,6 +95,17 @@ export default function InvoicesPage() {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    if (!currentTeam) return
+    if (!confirm('Delete this invoice?')) return
+    try {
+      await fetch(`/api/invoices?teamId=${currentTeam.team_id}&id=${id}`, { method: 'DELETE' })
+      setInvoices(prev => prev.filter(inv => inv.id !== id))
+    } catch (e) {
+      console.error('Delete invoice failed', e)
+    }
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -134,7 +138,7 @@ export default function InvoicesPage() {
             {canEditInvoices && (
               <Link href="/invoices/new">
                 <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0">
-                  <Plus className="w-5 h-5 mr-2" />
+                  <span className="w-5 h-5 mr-2">➕</span>
                   New Invoice
                 </Button>
               </Link>
@@ -148,7 +152,7 @@ export default function InvoicesPage() {
             {/* Search */}
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-300" />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-300">🔍</span>
                 <input
                   type="text"
                   value={searchTerm}
@@ -164,13 +168,13 @@ export default function InvoicesPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all appearance-none"
               >
-                <option value="all">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-                <option value="overdue">Overdue</option>
+                <option className="bg-slate-900" value="all">All Status</option>
+                <option className="bg-slate-900" value="draft">Draft</option>
+                <option className="bg-slate-900" value="pending">Pending</option>
+                <option className="bg-slate-900" value="paid">Paid</option>
+                <option className="bg-slate-900" value="overdue">Overdue</option>
               </select>
             </div>
 
@@ -199,8 +203,8 @@ export default function InvoicesPage() {
         {/* Invoices List */}
         {filteredInvoices.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-24 h-24 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FileText className="w-12 h-12 text-white" />
+              <div className="w-24 h-24 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-white text-4xl">📄</span>
             </div>
             <h2 className="text-2xl font-bold text-white mb-4">No Invoices Found</h2>
             <p className="text-purple-200 mb-8 max-w-md mx-auto">
@@ -212,7 +216,7 @@ export default function InvoicesPage() {
             {canEditInvoices && !searchTerm && statusFilter === 'all' && (
               <Link href="/invoices/new">
                 <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0">
-                  <Plus className="w-5 h-5 mr-2" />
+                  <span className="w-5 h-5 mr-2">➕</span>
                   Create First Invoice
                 </Button>
               </Link>
@@ -272,19 +276,19 @@ export default function InvoicesPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Link href={`/invoices/${invoice.id}`}>
                             <Button className="bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 p-2 rounded-lg">
-                              <Eye className="w-4 h-4" />
+                              <span className="w-4 h-4">👁️</span>
                             </Button>
                           </Link>
                           {canEditInvoices && (
                             <Link href={`/invoices/${invoice.id}/edit`}>
                               <Button className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-blue-200 hover:bg-blue-500/30 transition-all duration-300 p-2 rounded-lg">
-                                <Edit className="w-4 h-4" />
+                                <span className="w-4 h-4">✏️</span>
                               </Button>
                             </Link>
                           )}
                           {canDeleteInvoices && (
-                            <Button className="bg-red-500/20 backdrop-blur-sm border border-red-400/30 text-red-200 hover:bg-red-500/30 transition-all duration-300 p-2 rounded-lg">
-                              <Trash2 className="w-4 h-4" />
+                            <Button onClick={() => handleDelete(invoice.id)} className="bg-red-500/20 backdrop-blur-sm border border-red-400/30 text-red-200 hover:bg-red-500/30 transition-all duration-300 p-2 rounded-lg">
+                              <span className="w-4 h-4">🗑️</span>
                             </Button>
                           )}
                         </div>
@@ -302,7 +306,7 @@ export default function InvoicesPage() {
           <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-4">
               <div className="flex items-center gap-3">
-                <DollarSign className="w-8 h-8 text-emerald-400" />
+                <span className="w-8 h-8 text-emerald-400">💵</span>
                 <div>
                   <div className="text-2xl font-bold text-white">
                     {formatCurrency(filteredInvoices.reduce((sum, inv) => sum + inv.total_amount, 0))}
@@ -313,7 +317,7 @@ export default function InvoicesPage() {
             </div>
             <div className="bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-4">
               <div className="flex items-center gap-3">
-                <DollarSign className="w-8 h-8 text-yellow-400" />
+                <span className="w-8 h-8 text-yellow-400">💵</span>
                 <div>
                   <div className="text-2xl font-bold text-white">
                     {formatCurrency(filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0))}
@@ -324,7 +328,7 @@ export default function InvoicesPage() {
             </div>
             <div className="bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-4">
               <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-blue-400" />
+                <span className="w-8 h-8 text-blue-400">📄</span>
                 <div>
                   <div className="text-2xl font-bold text-white">{filteredInvoices.length}</div>
                   <div className="text-purple-200 text-sm">Invoices</div>
@@ -333,7 +337,7 @@ export default function InvoicesPage() {
             </div>
             <div className="bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-4">
               <div className="flex items-center gap-3">
-                <User className="w-8 h-8 text-purple-400" />
+                <span className="w-8 h-8 text-purple-400">👤</span>
                 <div>
                   <div className="text-2xl font-bold text-white">
                     {new Set(filteredInvoices.map(inv => inv.customer_name)).size}

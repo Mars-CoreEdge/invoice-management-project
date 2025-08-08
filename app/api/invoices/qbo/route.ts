@@ -1,85 +1,24 @@
 import { NextResponse } from 'next/server';
+import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server';
+import { getQuickBooksService } from '@/lib/quickbooks';
 
 export async function GET(request: Request) {
   try {
-    console.log('=== Fetching invoices using QBO session ===');
-    
-    const url = new URL(request.url);
-    const searchParams = url.searchParams;
-    
-    // Get QBO session from query params (in a real app, this would come from secure storage)
-    const sessionParam = searchParams.get('session');
-    if (!sessionParam) {
-      return NextResponse.json({
-        success: false,
-        error: 'QBO session not provided',
-        details: 'Please connect to QuickBooks first'
-      }, { 
-        status: 401 
-      });
+    console.log('=== Fetching invoices from QuickBooks for authenticated user ===');
+
+    const supabase = await createSupabaseForRequest(request as any);
+    const { data: { user }, error } = await getAuthenticatedUser(request as any);
+    if (error || !user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    let qboSession;
-    try {
-      qboSession = JSON.parse(decodeURIComponent(sessionParam));
-    } catch (error) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid QBO session data',
-        details: 'Session data is corrupted or invalid'
-      }, { 
-        status: 400 
-      });
+    const qbs = getQuickBooksService();
+    const loaded = await qbs.loadTokensForUser(user.id);
+    if (!loaded) {
+      return NextResponse.json({ success: false, error: 'QuickBooks not connected' }, { status: 401 });
     }
 
-    // Validate QBO session
-    if (!qboSession.realmId || !qboSession.access_token) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid QBO session',
-        details: 'Missing realmId or access_token'
-      }, { 
-        status: 401 
-      });
-    }
-
-    console.log('Using QBO session:', {
-      realmId: qboSession.realmId,
-      hasAccessToken: !!qboSession.access_token,
-      hasRefreshToken: !!qboSession.refresh_token
-    });
-
-    // Fetch invoices using the exact endpoint as requested
-    const query = 'SELECT * FROM Invoice';
-    const startposition = 1;
-    const maxresults = 10;
-    const minorversion = 65;
-    const apiUrl = `https://sandbox-quickbooks.api.intuit.com/v3/company/${qboSession.realmId}/query?query=${encodeURIComponent(query)}&startposition=${startposition}&maxresults=${maxresults}&minorversion=${minorversion}`;
-
-    console.log('Fetching invoices from QuickBooks API:', apiUrl);
-
-    const apiRes = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${qboSession.access_token}`,
-        'Accept': 'application/json'
-      }
-    });
-
-    const data = await apiRes.json();
-
-    if (data.Fault) {
-      console.error('QuickBooks API Error:', data.Fault);
-      return NextResponse.json({
-        success: false,
-        error: 'QuickBooks API error',
-        details: data.Fault
-      }, { 
-        status: 500 
-      });
-    }
-
-    const invoices = data.QueryResponse?.Invoice || [];
+    const invoices = await qbs.findInvoices({ limit: 1000 });
     console.log(`Found ${invoices.length} invoices from QuickBooks`);
 
     // Format invoices for frontend
@@ -104,11 +43,8 @@ export async function GET(request: Request) {
       success: true,
       data: formattedInvoices,
       count: formattedInvoices.length,
-      qboSession: {
-        realmId: qboSession.realmId,
-        hasAccessToken: !!qboSession.access_token,
-        hasRefreshToken: !!qboSession.refresh_token
-      }
+      companyName: (await qbs.getCompanyInfo()).CompanyName,
+      realmId: qbs.getRealmId()
     });
 
   } catch (error: any) {

@@ -139,7 +139,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const canInviteUsers = currentRole === 'admin'
   const canEditInvoices = currentRole === 'admin' || currentRole === 'accountant'
   const canDeleteInvoices = currentRole === 'admin'
-  const canUseAITools = currentRole === 'admin' || currentRole === 'accountant'
+  const canUseAITools = currentRole === 'admin' || currentRole === 'accountant' || currentRole === 'assistant'
 
   const value: TeamContextType = {
     currentTeam,

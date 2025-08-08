@@ -416,23 +416,22 @@ export class QuickBooksService {
   }
 
   // Direct API method to fetch invoices (same as Express server)
-  async fetchInvoicesDirect(limit: number = 10): Promise<any[]> {
+  async fetchInvoicesDirect(limit: number = 1000): Promise<any[]> {
     if (!this.accessToken || !this.realmId) {
       throw new Error('QuickBooks authentication required. Please connect your QuickBooks account first.');
     }
 
-    const query = 'SELECT * FROM Invoice';
-    const startposition = 1;
-    const maxresults = limit;
     const minorversion = 65;
-    const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${this.realmId}/query?query=${encodeURIComponent(query)}&startposition=${startposition}&maxresults=${maxresults}&minorversion=${minorversion}`;
+    const query = `SELECT * FROM Invoice STARTPOSITION 1 MAXRESULTS ${limit}`;
+    const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${this.realmId}/query?query=${encodeURIComponent(query)}&minorversion=${minorversion}`;
 
     try {
       const apiRes = await fetch(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/text'
         }
       });
 
@@ -468,13 +467,11 @@ export class QuickBooksService {
     
     try {
       // Use the direct API approach that we know works
-      const limit = criteria.limit || 50;
-      const query = 'SELECT * FROM Invoice';
-      const startposition = (criteria.offset || 0) + 1;
-      const maxresults = limit;
+      const limit = criteria.limit || 1000;
       const minorversion = 65;
-      
-      const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${this.realmId}/query?query=${encodeURIComponent(query)}&startposition=${startposition}&maxresults=${maxresults}&minorversion=${minorversion}`;
+      const startposition = (criteria.offset || 0) + 1;
+      const query = `SELECT * FROM Invoice STARTPOSITION ${startposition} MAXRESULTS ${limit}`;
+      const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${this.realmId}/query?query=${encodeURIComponent(query)}&minorversion=${minorversion}`;
 
       console.log('Fetching invoices from QuickBooks API:', url);
 
@@ -482,7 +479,8 @@ export class QuickBooksService {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/text'
         }
       });
 

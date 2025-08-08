@@ -96,14 +96,20 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // For now, return mock data
-    // In a real implementation, you would query the database for invoices
-    // filtered by teamId and user permissions
-    
-    return NextResponse.json({
-      success: true,
-      data: mockInvoices
-    })
+    // Fetch invoices from Supabase, scoped by team and created_by
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('team_id', teamId)
+      .eq('created_by', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Supabase fetch invoices error:', error)
+      return NextResponse.json({ success: false, error: 'Failed to fetch invoices' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, data: data || [] })
   } catch (error) {
     console.error('Error fetching invoices:', error)
     return NextResponse.json(
@@ -147,21 +153,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For now, return a mock created invoice
-    // In a real implementation, you would save to the database
-    const newInvoice = {
-      id: Date.now().toString(),
-      invoice_number: `INV-2024-${String(mockInvoices.length + 1).padStart(3, '0')}`,
-      ...invoiceData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+    const now = new Date().toISOString()
+    const invoice_number = invoiceData.invoice_number || `INV-${new Date().getFullYear()}-${Math.floor(Math.random()*100000).toString().padStart(5,'0')}`
+
+    const insertPayload = {
+      team_id: teamId,
+      created_by: user.id,
+      invoice_number,
+      customer_name: invoiceData.customer_name,
+      customer_email: invoiceData.customer_email,
+      customer_address: invoiceData.customer_address,
+      invoice_date: invoiceData.invoice_date,
+      due_date: invoiceData.due_date,
+      items: invoiceData.items || [],
+      subtotal: invoiceData.subtotal || 0,
+      tax: invoiceData.tax || 0,
+      total_amount: invoiceData.total_amount || 0,
+      balance: (invoiceData.balance ?? invoiceData.total_amount) || 0,
+      status: invoiceData.status || 'draft',
+      notes: invoiceData.notes || '',
+      terms: invoiceData.terms || '',
+      created_at: now,
+      updated_at: now,
     }
 
-    return NextResponse.json({
-      success: true,
-      data: newInvoice,
-      message: 'Invoice created successfully'
-    })
+    const { data, error } = await supabase
+      .from('invoices')
+      .insert(insertPayload)
+      .select('*')
+      .single()
+
+    if (error) {
+      console.error('Supabase insert invoice error:', error)
+      return NextResponse.json({ success: false, error: 'Failed to create invoice' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, data, message: 'Invoice created successfully' })
   } catch (error) {
     console.error('Error creating invoice:', error)
     return NextResponse.json(
@@ -170,3 +197,72 @@ export async function POST(request: NextRequest) {
     )
   }
 } 
+
+export async function PUT(request: NextRequest) {
+  try {
+    const supabase = await createSupabaseForRequest(request)
+    const { data: { user } } = await getAuthenticatedUser(request)
+    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+
+    const body = await (request as any).json()
+    const { teamId, id, updates } = body
+    if (!teamId || !id) return NextResponse.json({ success: false, error: 'Team ID and invoice ID are required' }, { status: 400 })
+
+    const teamService = getTeamService()
+    const roleCheck = await teamService.checkUserRole(user.id, teamId, ['admin', 'accountant'])
+    if (!roleCheck.has_permission) return NextResponse.json({ success: false, error: 'Insufficient permissions' }, { status: 403 })
+
+    const { data, error } = await supabase
+      .from('invoices')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('team_id', teamId)
+      .eq('created_by', user.id)
+      .select('*')
+      .single()
+
+    if (error) {
+      console.error('Supabase update invoice error:', error)
+      return NextResponse.json({ success: false, error: 'Failed to update invoice' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, data })
+  } catch (error) {
+    console.error('Error updating invoice:', error)
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createSupabaseForRequest(request)
+    const { data: { user } } = await getAuthenticatedUser(request)
+    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+
+    const { searchParams } = new URL((request as any).url)
+    const teamId = searchParams.get('teamId')
+    const id = searchParams.get('id')
+    if (!teamId || !id) return NextResponse.json({ success: false, error: 'Team ID and invoice ID are required' }, { status: 400 })
+
+    const teamService = getTeamService()
+    const roleCheck = await teamService.checkUserRole(user.id, teamId, ['admin'])
+    if (!roleCheck.has_permission) return NextResponse.json({ success: false, error: 'Admin role required' }, { status: 403 })
+
+    const { error } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', id)
+      .eq('team_id', teamId)
+      .eq('created_by', user.id)
+
+    if (error) {
+      console.error('Supabase delete invoice error:', error)
+      return NextResponse.json({ success: false, error: 'Failed to delete invoice' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting invoice:', error)
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  }
+}

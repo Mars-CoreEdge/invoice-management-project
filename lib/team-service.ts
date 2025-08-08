@@ -157,24 +157,25 @@ export class TeamService {
    */
   async getTeamMembers(teamId: string): Promise<TeamMember[]> {
     try {
-      const { data, error } = await this.supabase
-        .from('team_members')
-        .select(`
-          team_id,
-          user_id,
-          role,
-          joined_at,
-          invited_by,
-          users:user_id(email, raw_user_meta_data)
-        `)
-        .eq('team_id', teamId);
+      // Use RPC to safely join auth.users and return member details with email
+      const { data, error } = await this.supabase.rpc('get_team_members_details', { team_uuid: teamId });
 
       if (error) {
         console.error('Error getting team members:', error);
         return [];
       }
 
-      return data || [];
+      // Map RPC rows to TeamMember shape used by UI (with nested users.email)
+      const members: TeamMember[] = (data || []).map((row: any) => ({
+        team_id: row.team_id,
+        user_id: row.user_id,
+        role: row.role,
+        joined_at: row.joined_at,
+        invited_by: row.invited_by,
+        users: { email: row.email },
+      }));
+
+      return members;
     } catch (error) {
       console.error('Error in getTeamMembers:', error);
       return [];

@@ -138,6 +138,14 @@ export default function Dashboard() {
     setSelectedInvoice(invoice)
   }
 
+  if (checkingStatus) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading dashboard...</div>
+      </div>
+    )
+  }
+
   if (!isQuickBooksConnected) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col relative overflow-hidden">
@@ -236,7 +244,7 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
                   </div>
                 )}
 
-                                 <Link 
+                <Link 
                    href="/api/auth/quickbooks"
                    className={`w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-2xl text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0 group flex items-center justify-center ${connectionError?.includes('environment variable') ? 'opacity-50 cursor-not-allowed' : ''}`}
                  >
