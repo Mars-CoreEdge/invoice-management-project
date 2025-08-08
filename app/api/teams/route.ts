@@ -1,64 +1,84 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getTeamService } from '../../../lib/team-service';
-import { getUserIdFromRequest } from '../../../lib/utils';
-import { CreateTeamRequest } from '../../../types/teams';
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
+import { getTeamService } from '@/lib/team-service'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const supabase = await createSupabaseForRequest(request as any)
+    
+    // Get current user (supports Bearer Authorization too)
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request as any)
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    const teamService = getTeamService();
-    const teams = await teamService.getUserTeams(userId);
+    const teamService = getTeamService(supabase)
+    const teams = await teamService.getUserTeams(user.id)
 
-    return NextResponse.json({ teams });
+    return NextResponse.json({
+      success: true,
+      data: teams
+    })
   } catch (error) {
-    console.error('Error getting user teams:', error);
+    console.error('Error fetching teams:', error)
     return NextResponse.json(
-      { error: 'Failed to get teams' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body: CreateTeamRequest = await request.json();
+    const supabase = await createSupabaseForRequest(request as any)
     
-    if (!body.team_name || body.team_name.trim().length === 0) {
+    // Get current user (supports Bearer Authorization too)
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request as any)
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Team name is required' },
-        { status: 400 }
-      );
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    const teamService = getTeamService();
-    const teamId = await teamService.createTeam(body);
+    const body = await request.json()
+    const { team_name, description } = body
+
+    if (!team_name || typeof team_name !== 'string' || team_name.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Team name is required' },
+        { status: 400 }
+      )
+    }
+
+    const teamService = getTeamService(supabase)
+    const teamId = await teamService.createTeam({
+      team_name: team_name.trim(),
+      description: description?.trim()
+    })
 
     if (!teamId) {
       return NextResponse.json(
-        { error: 'Failed to create team' },
+        { success: false, error: 'Failed to create team' },
         { status: 500 }
-      );
+      )
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      team_id: teamId,
-      message: 'Team created successfully' 
-    });
+    // Get the created team details
+    const team = await teamService.getTeam(teamId)
+
+    return NextResponse.json({
+      success: true,
+      data: { team_id: teamId, team }
+    })
   } catch (error) {
-    console.error('Error creating team:', error);
+    console.error('Error creating team:', error)
     return NextResponse.json(
-      { error: 'Failed to create team' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 } 

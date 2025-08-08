@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { formatCurrency } from '../lib/mock-data'
 import { useAuth } from './AuthContext'
+import { TeamSwitcher } from './TeamSwitcher'
 
 interface HeaderProps {
   isConnected?: boolean
@@ -80,6 +81,11 @@ export function Header({ isConnected = false }: HeaderProps) {
                 AI-Powered QuickBooks Integration
               </p>
             </div>
+          </div>
+
+          {/* Team Switcher */}
+          <div className="hidden sm:block">
+            <TeamSwitcher />
           </div>
 
           {/* Status Indicators and User Menu */}

@@ -1,0 +1,112 @@
+{
+  "timestamp": "2025-08-07T23:59:10.221Z",
+  "baseUrl": "http://localhost:3000",
+  "summary": {
+    "total": 20,
+    "passed": 20,
+    "failed": 0,
+    "successRate": "100.0"
+  },
+  "details": [
+    {
+      "name": "Authentication - Login",
+      "status": "PASS",
+      "details": "Authenticated as test@example.com"
+    },
+    {
+      "name": "OAuth - GET /api/oauth",
+      "status": "PASS",
+      "details": "Correctly redirects to OAuth provider"
+    },
+    {
+      "name": "Auth - GET /api/auth/quickbooks/callback",
+      "status": "PASS",
+      "details": "Correctly handles missing OAuth parameters"
+    },
+    {
+      "name": "Utility - GET /api/test-openai",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Utility - GET /api/test-oauth",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Protected - GET /api/protected",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Teams - GET /api/teams",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Teams - POST /api/teams",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Teams - GET /api/teams/bea847db-3317-4aae-b288-bd67222b1c96",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Teams - PUT /api/teams/bea847db-3317-4aae-b288-bd67222b1c96",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Teams - GET /api/teams/bea847db-3317-4aae-b288-bd67222b1c96/members",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Teams - POST /api/teams/bea847db-3317-4aae-b288-bd67222b1c96/invite",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Invoices - GET /api/invoices",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Invoices - POST /api/invoices",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "Chat - POST /api/chat",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "AI Invoices - POST /api/ai/invoices",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "QuickBooks - GET /api/quickbooks/status",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "QBO - GET /api/qbo/company",
+      "status": "PASS",
+      "details": "Not connected (expected in dev)"
+    },
+    {
+      "name": "QBO - GET /api/qbo/customers",
+      "status": "PASS",
+      "details": "Not connected (expected in dev)"
+    },
+    {
+      "name": "QBO - GET /api/qbo/items",
+      "status": "PASS",
+      "details": "Not connected (expected in dev)"
+    }
+  ]
+}

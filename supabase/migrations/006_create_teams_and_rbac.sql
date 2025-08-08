@@ -264,7 +264,7 @@ BEGIN
     t.team_name,
     tm.role,
     (t.owner_id = user_uuid) as is_owner,
-    (SELECT COUNT(*) FROM public.team_members WHERE team_id = t.id) as member_count
+    (SELECT COUNT(*) FROM public.team_members WHERE team_members.team_id = t.id) as member_count
   FROM public.teams t
   INNER JOIN public.team_members tm ON t.id = tm.team_id
   WHERE tm.user_id = user_uuid

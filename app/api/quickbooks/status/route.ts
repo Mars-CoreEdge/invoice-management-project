@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getQuickBooksService } from '@/lib/quickbooks';
 import { getQuickBooksTokenManager } from '@/lib/quickbooks-token-manager';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server';
 
 export async function GET(request: Request) {
   try {
     // Get the current authenticated user
-    const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const supabase = await createSupabaseForRequest(request as any);
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request as any);
     
     if (authError || !user) {
       return NextResponse.json({
@@ -72,8 +72,8 @@ export async function GET(request: Request) {
 export async function DELETE(request: Request) {
   try {
     // Get the current authenticated user
-    const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const supabase = await createSupabaseForRequest(request as any);
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request as any);
     
     if (authError || !user) {
       return NextResponse.json({

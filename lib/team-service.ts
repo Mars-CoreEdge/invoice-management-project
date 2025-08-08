@@ -15,7 +15,11 @@ import {
 } from '../types/teams';
 
 export class TeamService {
-  private supabase = createServerSupabaseClient();
+  private supabase: any;
+
+  constructor(supabaseClient?: any) {
+    this.supabase = supabaseClient ?? createServerSupabaseClient();
+  }
 
   /**
    * Check if a user has a specific role in a team
@@ -62,16 +66,41 @@ export class TeamService {
    */
   async getUserTeams(userId: string): Promise<UserTeam[]> {
     try {
-      const { data, error } = await this.supabase.rpc('get_user_teams', {
-        user_uuid: userId
-      });
+      // Avoid RPC to prevent ambiguous column errors; use explicit join
+      const { data, error } = await this.supabase
+        .from('team_members')
+        .select('team_id, role, teams:team_id(id, team_name, owner_id)')
+        .eq('user_id', userId);
 
       if (error) {
         console.error('Error getting user teams:', error);
         return [];
       }
 
-      return data || [];
+      const teams: UserTeam[] = [];
+      for (const row of data || []) {
+        const teamId = row.team_id as string;
+        const team = (row as any).teams;
+        // Count members for this team (best-effort)
+        let memberCount = 0;
+        try {
+          const { count } = await this.supabase
+            .from('team_members')
+            .select('team_id', { count: 'exact', head: true })
+            .eq('team_id', teamId);
+          memberCount = count ?? 0;
+        } catch {}
+
+        teams.push({
+          team_id: teamId,
+          team_name: team?.team_name ?? 'Team',
+          role: row.role,
+          is_owner: team?.owner_id === userId,
+          member_count: memberCount
+        });
+      }
+
+      return teams;
     } catch (error) {
       console.error('Error in getUserTeams:', error);
       return [];
@@ -405,12 +434,6 @@ export class TeamService {
   }
 }
 
-// Singleton instance
-let teamServiceInstance: TeamService | null = null;
-
-export function getTeamService(): TeamService {
-  if (!teamServiceInstance) {
-    teamServiceInstance = new TeamService();
-  }
-  return teamServiceInstance;
-} 
+export function getTeamService(supabaseClient?: any): TeamService {
+  return new TeamService(supabaseClient);
+}

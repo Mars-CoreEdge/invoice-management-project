@@ -1,125 +1,104 @@
-import { openai } from '@ai-sdk/openai';
-import { streamText } from 'ai';
-import { invoiceTools } from '@/lib/ai-tools';
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
+import { getTeamService } from '@/lib/team-service'
+import { openai } from '@ai-sdk/openai'
+import { generateText } from 'ai'
 
-export const maxDuration = 30;
-
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { messages } = await req.json();
-    console.log('✅ Chat API called with', messages.length, 'messages');
+    const supabase = await createSupabaseForRequest(request)
+    
+    // Get current user (supports Bearer Authorization too)
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request)
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
-    // Use AI SDK with proper tools integration
-    const result = await streamText({
-      model: openai('gpt-3.5-turbo'),
-      messages,
-      tools: invoiceTools,
-      maxSteps: 5, // Allow multi-step interactions for complex invoice workflows
-      temperature: 0.7,
-      system: `You are an intelligent AI assistant for an Invoice Management system integrated with QuickBooks. 
+    const body = await (request as any).json()
+    const { message, teamId, history = [] } = body
+
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Message is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!teamId) {
+      return NextResponse.json(
+        { success: false, error: 'Team ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const teamService = getTeamService()
+
+    // Check if user has access to AI tools in this team
+    const roleCheck = await teamService.checkUserRole(user.id, teamId, ['admin', 'accountant'])
+    if (!roleCheck.has_permission) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied. Admin or accountant role required.' },
+        { status: 403 }
+      )
+    }
+
+    // Get team details for context
+    const team = await teamService.getTeam(teamId)
+    if (!team) {
+      return NextResponse.json(
+        { success: false, error: 'Team not found' },
+        { status: 404 }
+      )
+    }
+
+    // Build system prompt with team context
+    const systemPrompt = `You are an AI assistant for the invoice management system. You're helping the team "${team.team_name}" with their invoice management tasks.
 
 Your capabilities include:
-- Invoice management (create, read, update, delete, void, email)
-- QuickBooks data retrieval (customers, items, invoice statistics)
-- Business calculations and advice
-- General knowledge assistance
+- Creating and managing invoices
+- Analyzing invoice data and trends
+- Providing business insights
+- QuickBooks integration support
+- Financial reporting and analysis
 
-Key behaviors:
-1. Use appropriate tools for invoice-related tasks
-2. Provide helpful, actionable business advice
-3. Format responses clearly with relevant details
-4. Handle errors gracefully and suggest alternatives
-5. Be proactive in offering related assistance
+Current user role: ${roleCheck.user_role}
+Team: ${team.team_name}
+${team.description ? `Team description: ${team.description}` : ''}
 
-Always strive to be helpful, accurate, and business-focused in your responses.`,
-      
-      // Handle step completion for UI updates
-      onStepFinish({ text, toolCalls, toolResults, finishReason }) {
-        console.log('🔧 Step completed:', {
-          hasText: !!text,
-          toolCallsCount: toolCalls?.length || 0,
-          toolResultsCount: toolResults?.length || 0,
-          finishReason
-        });
-        
-        // Log tool calls for debugging
-        if (toolCalls && toolCalls.length > 0) {
-          toolCalls.forEach((call, index) => {
-            console.log(`📞 Tool Call ${index + 1}:`, call.toolName, 'with args:', call.args);
-          });
-        }
-        
-        // Log tool results for debugging
-        if (toolResults && toolResults.length > 0) {
-          toolResults.forEach((result, index) => {
-            console.log(`📋 Tool Result ${index + 1}:`, result.result ? 'Success' : 'Error');
-          });
-        }
-      },
-      
-      // Handle individual tool calls
-      onToolCall({ toolCall }) {
-        console.log(`🛠️ Calling tool: ${toolCall.toolName}`);
-      },
-      
-      // Handle tool results
-      onToolResult({ toolCall, result }) {
-        console.log(`✅ Tool ${toolCall.toolName} completed:`, result.success ? 'Success' : 'Failed');
-      }
-    });
+Please provide helpful, accurate, and actionable responses. If you need to perform specific actions like creating invoices or accessing data, let the user know what information you need.
 
-    console.log('🤖 AI response generated successfully');
+Always be professional, concise, and focus on practical business advice.`
 
-    // Return streaming response compatible with useChat
-    return result.toDataStreamResponse({
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'X-Vercel-AI-Data-Stream': 'v1',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
-    });
+    // Prepare conversation history
+    const messages = [
+      { role: 'system' as const, content: systemPrompt },
+      ...history.map((msg: any) => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      })),
+      { role: 'user' as const, content: message }
+    ]
 
-  } catch (error: any) {
-    console.error('❌ Chat API error:', error);
-    
-    // Handle specific AI SDK errors
-    if (error.name === 'NoSuchToolError') {
-      return new Response(
-        JSON.stringify({ 
-          error: '🔧 The requested tool is not available. Please try a different approach.',
-          details: error.message 
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    } else if (error.name === 'InvalidToolArgumentsError') {
-      return new Response(
-        JSON.stringify({ 
-          error: '📝 Invalid parameters provided. Please check your request and try again.',
-          details: error.message 
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    } else if (error.name === 'ToolExecutionError') {
-      return new Response(
-        JSON.stringify({ 
-          error: '⚠️ QuickBooks operation failed. Please check your connection and try again.',
-          details: error.message 
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Generic error handling
-    return new Response(
-      JSON.stringify({ 
-        error: '🤖 I encountered an error processing your request. Please try again.',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-      }),
-      { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json' } 
-      }
-    );
+    // Generate AI response
+    const result = await generateText({
+      model: openai('gpt-4'),
+      messages,
+      maxTokens: 1000,
+      temperature: 0.7,
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: result.text
+    })
+  } catch (error) {
+    console.error('Error in chat API:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to generate response' },
+      { status: 500 }
+    )
   }
 } 

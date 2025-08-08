@@ -35,17 +35,44 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Define protected routes that require authentication
+  const protectedRoutes = [
+    '/dashboard',
+    '/invoices',
+    '/teams',
+    '/assistant',
+    '/analytics',
+    '/settings'
+  ]
+
+  // Define auth routes
+  const authRoutes = ['/auth/login', '/auth/signup']
+
+  const isProtectedRoute = protectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+  const isAuthRoute = authRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+
   // If there's no user and the user is trying to access a protected route,
   // redirect them to the login page
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+  if (!user && isProtectedRoute) {
     const redirectUrl = new URL('/auth/login', request.url)
+    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
   // If there's a user and they're trying to access auth pages, redirect to dashboard
-  if (user && (request.nextUrl.pathname.startsWith('/auth'))) {
+  if (user && isAuthRoute) {
     const redirectUrl = new URL('/dashboard', request.url)
     return NextResponse.redirect(redirectUrl)
+  }
+
+  // Handle team invitation acceptance
+  if (request.nextUrl.pathname.startsWith('/teams/invitations/accept')) {
+    // Allow access to invitation acceptance without requiring team context
+    return supabaseResponse
   }
 
   return supabaseResponse

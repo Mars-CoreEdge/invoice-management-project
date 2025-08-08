@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTeamService } from '../../../../../lib/team-service';
-import { getUserIdFromRequest } from '../../../../../lib/utils';
-import { InviteUserRequest, TeamRole } from '../../../../../types/teams';
+import { createSupabaseForRequest, getAuthenticatedUser } from '../../../../../lib/supabase-server';
+import { InviteUserRequest } from '../../../../../types/teams';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { teamId: string } }
 ) {
   try {
-    const userId = await getUserIdFromRequest(request);
+    const supabase = await createSupabaseForRequest(request);
+    const { data: { user } } = await getAuthenticatedUser(request);
+    const userId = user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const teamService = getTeamService(supabase);
     
     // Check if user has access to this team
     const hasAccess = await teamService.checkUserRole(userId, params.teamId);
@@ -37,12 +39,14 @@ export async function POST(
   { params }: { params: { teamId: string } }
 ) {
   try {
-    const userId = await getUserIdFromRequest(request);
+    const supabase = await createSupabaseForRequest(request);
+    const { data: { user } } = await getAuthenticatedUser(request);
+    const userId = user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const teamService = getTeamService();
+    const teamService = getTeamService(supabase);
     
     // Check if user can invite others
     const hasPermission = await teamService.checkUserPermission(

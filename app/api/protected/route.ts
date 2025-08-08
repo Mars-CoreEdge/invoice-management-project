@@ -1,32 +1,32 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    const supabase = createServerSupabaseClient()
+    const supabase = await createSupabaseForRequest(request as any)
     
-    // Get the current user from the session
-    const { data: { user }, error } = await supabase.auth.getUser()
-    
-    if (error || !user) {
+    // Get the current user from cookie session or Authorization header
+    const { data: { user }, error } = await getAuthenticatedUser(request as any)
+
+    // Determine token source (session or Authorization header)
+    const authHeader = (request.headers as any).get('authorization') || (request.headers as any).get('Authorization')
+    const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token || bearer
+
+    if ((error || !user) && !token) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
     
-    // Get the session to access the JWT token
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'No session found' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
-    
-    // Example of using the JWT token for additional validation
-    const token = session.access_token
     
     // You can decode the JWT to get user information
     // Note: In production, you should verify the JWT signature on the server side

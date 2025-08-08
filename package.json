@@ -7,7 +7,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:auth": "node scripts/test-auth.js",
+    "test:endpoints": "node scripts/test-endpoints-simple.js",
+    "test:endpoints:full": "node scripts/test-endpoints.js",
+    "test:endpoints:help": "node scripts/test-endpoints-simple.js --help",
+    "test:quick": "node scripts/quick-test.js",
+    "setup:env": "node scripts/setup-env.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.24",

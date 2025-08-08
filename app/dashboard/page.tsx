@@ -3,16 +3,22 @@
 import { useState, useEffect } from 'react'
 import { InvoicePanel } from '@/components/InvoicePanel'
 import { ChatPanel } from '@/components/ChatPanel'
-import { Header } from '@/components/Header'
 import { QuickBooksIntegration } from '@/components/QuickBooksIntegration'
+import { Header } from '@/components/Header'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, CheckCircle, Settings, RotateCcw } from 'lucide-react'
+import { AlertCircle, CheckCircle, Settings } from 'lucide-react'
 import { useAuth } from '@/components/AuthContext'
+import { useTeam } from '@/components/TeamContext'
+import { AppLayout } from '@/components/layout/AppLayout'
 import SessionInfo from '@/components/SessionInfo'
 import Link from 'next/link'
 
 export default function Dashboard() {
-  const { user, loading } = useAuth()
+  const auth: any = useAuth()
+  const user = auth?.user
+  const loading = auth?.loading
+  const teamCtx: any = useTeam()
+  const currentTeam = teamCtx?.currentTeam
   const [isQuickBooksConnected, setIsQuickBooksConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
@@ -22,7 +28,7 @@ export default function Dashboard() {
   const checkQuickBooksStatus = async () => {
     setCheckingStatus(true)
     try {
-      const response = await fetch('/api/auth/quickbooks/status')
+      const response = await fetch('/api/quickbooks/status')
       const result = await response.json()
       if (result.success) {
         setQuickBooksStatus(result.status)
@@ -92,6 +98,37 @@ export default function Dashboard() {
   // AuthContext handles redirects automatically
   if (!user) {
     return null
+  }
+
+  // Show no team state
+  if (!currentTeam) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full mx-auto">
+          <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/20">
+            <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-3xl">👥</span>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-4">No Team Selected</h1>
+            <p className="text-purple-200 mb-6">
+              You need to be part of a team to access the dashboard.
+            </p>
+            <div className="space-y-3">
+              <Link href="/teams/new">
+                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0">
+                  Create New Team
+                </Button>
+              </Link>
+              <Link href="/teams">
+                <Button className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 py-3 px-6 rounded-2xl">
+                  View My Teams
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // QuickBooks connect is handled by API route which redirects to external OAuth
@@ -229,46 +266,92 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 opacity-10 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 opacity-10 animate-pulse delay-1000"></div>
-      </div>
-      
-      <Header isConnected={isQuickBooksConnected} />
-      
-             {/* Success notification - Commented out for production */}
-       {/* <div className="bg-gradient-to-r from-emerald-500/20 to-green-500/20 backdrop-blur-sm border-l-4 border-emerald-400 p-3 sm:p-4 mb-3 sm:mb-4 mx-3 sm:mx-4 rounded-r-xl relative z-10">
-         <div className="flex items-center">
-           <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 mr-2 sm:mr-3 animate-bounce" />
-           <p className="text-emerald-100 font-semibold text-sm sm:text-base">
-             ✨ Successfully connected to QuickBooks Online!
-           </p>
-           <span className="ml-2 text-emerald-400">📈</span>
-         </div>
-       </div> */}
-      
-      {/* Main responsive layout - stacks vertically on mobile, side-by-side on larger screens */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 p-3 sm:p-6 relative z-10 min-h-0">
-        {/* QuickBooks Integration Panel - full width on mobile, half width on desktop */}
-        <div className="w-full lg:w-1/2 h-[calc(100vh-16rem)] lg:h-auto lg:flex-1">
-          <QuickBooksIntegration />
+    <AppLayout>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
+          <p className="text-purple-200">
+            Welcome to {currentTeam.team_name} - Manage your invoices and QuickBooks integration
+          </p>
         </div>
 
-        {/* AI Chat Panel - full width on mobile, half width on desktop */}
-        <div className="w-full lg:w-1/2 h-[calc(100vh-16rem)] lg:h-auto lg:flex-1">
-          <ChatPanel 
-            selectedInvoice={selectedInvoice}
-            onInvoiceSelect={handleInvoiceSelect}
-          />
+        {/* QuickBooks Connection Status */}
+        {!isQuickBooksConnected && (
+          <div className="mb-6 bg-amber-500/20 backdrop-blur-sm border border-amber-400/30 rounded-2xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Settings className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-semibold mb-2">Connect QuickBooks</h3>
+                <p className="text-purple-200 mb-4">
+                  Connect your QuickBooks account to sync invoices and enable AI-powered features.
+                </p>
+                <Link href="/api/auth/quickbooks">
+                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-300">
+                    Connect QuickBooks
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Dashboard Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* QuickBooks Integration Panel */}
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+            <h2 className="text-xl font-bold text-white mb-4">QuickBooks Integration</h2>
+            <QuickBooksIntegration />
+          </div>
+
+          {/* AI Chat Panel */}
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+            <h2 className="text-xl font-bold text-white mb-4">AI Assistant</h2>
+            <ChatPanel 
+              selectedInvoice={selectedInvoice}
+              onInvoiceSelect={handleInvoiceSelect}
+            />
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-white mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link href="/invoices">
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-300 cursor-pointer">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center mb-4">
+                  <span className="text-2xl">📄</span>
+                </div>
+                <h3 className="text-white font-semibold mb-2">View Invoices</h3>
+                <p className="text-purple-200 text-sm">Browse and manage all your invoices</p>
+              </div>
+            </Link>
+            
+            <Link href="/invoices/new">
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-300 cursor-pointer">
+                <div className="w-12 h-12 bg-gradient-to-r from-emerald-600 to-green-600 rounded-xl flex items-center justify-center mb-4">
+                  <span className="text-2xl">➕</span>
+                </div>
+                <h3 className="text-white font-semibold mb-2">Create Invoice</h3>
+                <p className="text-purple-200 text-sm">Generate a new invoice for your customer</p>
+              </div>
+            </Link>
+            
+            <Link href="/assistant">
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-300 cursor-pointer">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center mb-4">
+                  <span className="text-2xl">🤖</span>
+                </div>
+                <h3 className="text-white font-semibold mb-2">AI Assistant</h3>
+                <p className="text-purple-200 text-sm">Get help with AI-powered insights</p>
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
-
-             {/* Session Info Panel - Debug/Development Only - Commented out for production */}
-       {/* <div className="p-3 sm:p-6 relative z-10">
-         <SessionInfo />
-       </div> */}
-    </div>
+    </AppLayout>
   )
 } 

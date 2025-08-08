@@ -4,6 +4,7 @@ declare module '@ai-sdk/openai' {
 
 declare module 'ai' {
   export function streamText(options: any): any;
+  export function generateText(options: any): any;
   export function tool(options: any): any;
 }
 

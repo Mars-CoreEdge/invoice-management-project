@@ -1,38 +1,64 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getTeamService } from '../../../../lib/team-service';
-import { getUserIdFromRequest } from '../../../../lib/utils';
-import { Team } from '../../../../types/teams';
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
+import { getTeamService } from '@/lib/team-service'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { teamId: string } }
 ) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const teamService = getTeamService();
+    const supabase = await createSupabaseForRequest(request)
     
+    // Get current user
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request)
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const { teamId } = params
+    const teamService = getTeamService(supabase)
+
     // Check if user has access to this team
-    const hasAccess = await teamService.checkUserRole(userId, params.teamId);
-    if (!hasAccess.is_member) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    const roleCheck = await teamService.checkUserRole(user.id, teamId)
+    if (!roleCheck.is_member) {
+      return NextResponse.json(
+        { success: false, error: 'Team not found or access denied' },
+        { status: 404 }
+      )
     }
 
-    const team = await teamService.getTeam(params.teamId);
+    // Get team details
+    const team = await teamService.getTeam(teamId)
     if (!team) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: 'Team not found' },
+        { status: 404 }
+      )
     }
 
-    return NextResponse.json({ team });
+    // Get team members
+    const members = await teamService.getTeamMembers(teamId)
+    
+    // Get pending invitations
+    const invitations = await teamService.getTeamInvitations(teamId)
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...team,
+        members,
+        invitations
+      }
+    })
   } catch (error) {
-    console.error('Error getting team:', error);
+    console.error('Error fetching team details:', error)
     return NextResponse.json(
-      { error: 'Failed to get team' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -41,51 +67,55 @@ export async function PUT(
   { params }: { params: { teamId: string } }
 ) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const teamService = getTeamService();
+    const supabase = await createSupabaseForRequest(request)
     
-    // Check if user is admin of this team
-    const hasPermission = await teamService.checkUserPermission(
-      userId, 
-      params.teamId, 
-      'can_manage_team'
-    );
-    
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
-
-    const body: Partial<Pick<Team, 'team_name' | 'description'>> = await request.json();
-    
-    if (body.team_name !== undefined && body.team_name.trim().length === 0) {
+    // Get current user
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request)
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Team name cannot be empty' },
-        { status: 400 }
-      );
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    const success = await teamService.updateTeam(params.teamId, body);
+    const { teamId } = params
+    const body = await request.json()
+    const { team_name, description } = body
+
+    const teamService = getTeamService(supabase)
+
+    // Check if user is admin of this team
+    const roleCheck = await teamService.checkUserRole(user.id, teamId, ['admin'])
+    if (!roleCheck.has_permission) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      )
+    }
+
+    // Update team
+    const success = await teamService.updateTeam(teamId, {
+      team_name: team_name?.trim(),
+      description: description?.trim()
+    })
+
     if (!success) {
       return NextResponse.json(
-        { error: 'Failed to update team' },
+        { success: false, error: 'Failed to update team' },
         { status: 500 }
-      );
+      )
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Team updated successfully' 
-    });
+      message: 'Team updated successfully'
+    })
   } catch (error) {
-    console.error('Error updating team:', error);
+    console.error('Error updating team:', error)
     return NextResponse.json(
-      { error: 'Failed to update team' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -94,36 +124,48 @@ export async function DELETE(
   { params }: { params: { teamId: string } }
 ) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const teamService = getTeamService();
+    const supabase = await createSupabaseForRequest(request)
     
-    // Check if user is the team owner
-    const isOwner = await teamService.isTeamOwner(userId, params.teamId);
-    if (!isOwner) {
-      return NextResponse.json({ error: 'Only team owner can delete team' }, { status: 403 });
+    // Get current user
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request)
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    const success = await teamService.deleteTeam(params.teamId);
+    const { teamId } = params
+    const teamService = getTeamService(supabase)
+
+    // Check if user is the team owner
+    const isOwner = await teamService.isTeamOwner(user.id, teamId)
+    if (!isOwner) {
+      return NextResponse.json(
+        { success: false, error: 'Only team owner can delete the team' },
+        { status: 403 }
+      )
+    }
+
+    // Delete team
+    const success = await teamService.deleteTeam(teamId)
+
     if (!success) {
       return NextResponse.json(
-        { error: 'Failed to delete team' },
+        { success: false, error: 'Failed to delete team' },
         { status: 500 }
-      );
+      )
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Team deleted successfully' 
-    });
+      message: 'Team deleted successfully'
+    })
   } catch (error) {
-    console.error('Error deleting team:', error);
+    console.error('Error deleting team:', error)
     return NextResponse.json(
-      { error: 'Failed to delete team' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 } 

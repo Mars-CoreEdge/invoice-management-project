@@ -1,112 +1,172 @@
-import { NextResponse } from 'next/server';
-import { getQBOSessionManager } from '@/lib/qbo-session';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
+import { getTeamService } from '@/lib/team-service'
 
-export async function GET(request: Request) {
+// Mock invoice data for demonstration
+const mockInvoices = [
+  {
+    id: '1',
+    invoice_number: 'INV-2024-001',
+    customer_name: 'Acme Corporation',
+    total_amount: 2500.00,
+    balance: 2500.00,
+    status: 'pending',
+    due_date: '2024-02-15',
+    created_at: '2024-01-15T10:00:00Z',
+    updated_at: '2024-01-15T10:00:00Z'
+  },
+  {
+    id: '2',
+    invoice_number: 'INV-2024-002',
+    customer_name: 'Tech Solutions Inc',
+    total_amount: 1800.00,
+    balance: 0.00,
+    status: 'paid',
+    due_date: '2024-02-10',
+    created_at: '2024-01-10T14:30:00Z',
+    updated_at: '2024-01-12T09:15:00Z'
+  },
+  {
+    id: '3',
+    invoice_number: 'INV-2024-003',
+    customer_name: 'Global Industries',
+    total_amount: 3200.00,
+    balance: 3200.00,
+    status: 'overdue',
+    due_date: '2024-01-20',
+    created_at: '2024-01-05T11:20:00Z',
+    updated_at: '2024-01-05T11:20:00Z'
+  },
+  {
+    id: '4',
+    invoice_number: 'INV-2024-004',
+    customer_name: 'Startup Ventures',
+    total_amount: 950.00,
+    balance: 950.00,
+    status: 'draft',
+    due_date: '2024-03-01',
+    created_at: '2024-01-20T16:45:00Z',
+    updated_at: '2024-01-20T16:45:00Z'
+  },
+  {
+    id: '5',
+    invoice_number: 'INV-2024-005',
+    customer_name: 'Enterprise Solutions',
+    total_amount: 4200.00,
+    balance: 0.00,
+    status: 'paid',
+    due_date: '2024-02-05',
+    created_at: '2024-01-08T13:15:00Z',
+    updated_at: '2024-01-10T08:30:00Z'
+  }
+]
+
+export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url);
-    const searchParams = url.searchParams;
+    const supabase = await createSupabaseForRequest(request)
     
-    // Extract query parameters
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
-
-    // Get the current authenticated user
-    const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+    // Get current user (supports Bearer Authorization too)
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request)
     if (authError || !user) {
-      return NextResponse.json({
-        success: false,
-        error: 'Unauthorized',
-        details: 'Please log in to access invoices',
-        requiresAuth: true
-      }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    const qboSessionManager = getQBOSessionManager();
-    
-    // Get QBO session for the current user
-    const session = await qboSessionManager.getSession(user.id);
-    
-    if (!session) {
-      return NextResponse.json({
-        success: false,
-        error: 'QuickBooks connection required',
-        details: 'Please connect your QuickBooks account first',
-        requiresAuth: true
-      }, { status: 401 });
+    // NextRequest doesn't expose .url type in our d.ts; use as any
+    const { searchParams } = new URL((request as any).url)
+    const teamId = searchParams.get('teamId')
+
+    if (!teamId) {
+      return NextResponse.json(
+        { success: false, error: 'Team ID is required' },
+        { status: 400 }
+      )
     }
 
-    // Fetch invoices using the QBO session manager
-    const result = await qboSessionManager.getInvoices(session, limit, offset);
-    
-    if (!result.success) {
-      return NextResponse.json({
-        success: false,
-        error: result.error || 'Failed to fetch invoices'
-      }, { status: 500 });
+    const teamService = getTeamService()
+
+    // Check if user has access to view invoices in this team
+    const roleCheck = await teamService.checkUserRole(user.id, teamId)
+    if (!roleCheck.is_member) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
+      )
     }
 
-    // Transform QuickBooks invoice data to our frontend format
-    const transformedInvoices = (result.data || []).map((invoice: any) => {
-      const balance = parseFloat(invoice.Balance || 0);
-      const totalAmount = parseFloat(invoice.TotalAmt || 0);
-      const dueDate = invoice.DueDate;
-      const today = new Date().toISOString().split('T')[0];
-      
-      let status: 'paid' | 'unpaid' | 'overdue' = 'unpaid';
-      if (balance === 0) {
-        status = 'paid';
-      } else if (dueDate && dueDate < today) {
-        status = 'overdue';
-      }
+    // For now, return mock data
+    // In a real implementation, you would query the database for invoices
+    // filtered by teamId and user permissions
+    
+    return NextResponse.json({
+      success: true,
+      data: mockInvoices
+    })
+  } catch (error) {
+    console.error('Error fetching invoices:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
 
-      return {
-        id: invoice.Id,
-        docNumber: invoice.DocNumber || `INV-${invoice.Id}`,
-        txnDate: invoice.TxnDate || new Date().toISOString().split('T')[0],
-        dueDate: invoice.DueDate || new Date().toISOString().split('T')[0],
-        totalAmount: totalAmount,
-        balance: balance,
-        customer: invoice.CustomerRef?.name || 'Unknown Customer',
-        status: status,
-        customerRef: invoice.CustomerRef,
-        lineItems: invoice.Line || []
-      };
-    });
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createSupabaseForRequest(request)
+    
+    // Get current user (supports Bearer Authorization too)
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request)
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const body = await (request as any).json()
+    const { teamId, ...invoiceData } = body
+
+    if (!teamId) {
+      return NextResponse.json(
+        { success: false, error: 'Team ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const teamService = getTeamService()
+
+    // Check if user can create invoices in this team
+    const roleCheck = await teamService.checkUserRole(user.id, teamId, ['admin', 'accountant'])
+    if (!roleCheck.has_permission) {
+      return NextResponse.json(
+        { success: false, error: 'Admin or accountant role required to create invoices' },
+        { status: 403 }
+      )
+    }
+
+    // For now, return a mock created invoice
+    // In a real implementation, you would save to the database
+    const newInvoice = {
+      id: Date.now().toString(),
+      invoice_number: `INV-2024-${String(mockInvoices.length + 1).padStart(3, '0')}`,
+      ...invoiceData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
 
     return NextResponse.json({
       success: true,
-      data: transformedInvoices,
-      count: transformedInvoices.length,
-      hasMore: transformedInvoices.length === limit
-    });
-
-  } catch (error: any) {
-    console.error('Error fetching invoices:', error);
-    
-    // Return meaningful error messages
-    let errorMessage = 'Failed to fetch invoices';
-    let errorDetails = error.message;
-    let requiresAuth = false;
-    
-    if (error.message.includes('authentication required') || 
-        error.message.includes('access token') || 
-        error.message.includes('OAuth') ||
-        error.message.includes('connect your QuickBooks account')) {
-      errorMessage = 'QuickBooks connection required';
-      errorDetails = 'Please connect your QuickBooks account first';
-      requiresAuth = true;
-    }
-
-    return NextResponse.json({
-      success: false,
-      error: errorMessage,
-      details: errorDetails,
-      requiresAuth: requiresAuth
-    }, { 
-      status: requiresAuth ? 401 : 500 
-    });
+      data: newInvoice,
+      message: 'Invoice created successfully'
+    })
+  } catch (error) {
+    console.error('Error creating invoice:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 } 
