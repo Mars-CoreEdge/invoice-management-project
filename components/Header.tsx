@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { formatCurrency } from '../lib/mock-data'
 import { useAuth } from './AuthContext'
 import { TeamSwitcher } from './TeamSwitcher'
+import { useTeam } from './TeamContext'
 
 interface HeaderProps {
   isConnected?: boolean
@@ -27,30 +28,29 @@ export function Header({ isConnected = false }: HeaderProps) {
   })
   const [loading, setLoading] = useState(false)
   const { signOut } = useAuth()
+  const { currentTeam } = useTeam()
 
-  // Fetch real invoice stats when connected
+  // Fetch real invoice stats when connected and team is available
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected && currentTeam) {
       fetchInvoiceStats()
     }
-  }, [isConnected])
+  }, [isConnected, currentTeam])
 
   const fetchInvoiceStats = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/ai/invoices')
+      if (!currentTeam) return
+      const response = await fetch(`/api/invoices?teamId=${currentTeam.team_id}`)
       const result = await response.json()
-      
-      if (result.success && result.data) {
+      if (result.success && Array.isArray(result.data)) {
         const invoices = result.data
-        const stats = {
-          totalInvoices: invoices.length,
-          totalRevenue: invoices.reduce((sum: number, inv: any) => sum + (inv.totalAmount || 0), 0),
-          paidCount: invoices.filter((inv: any) => inv.balance === 0).length,
-          unpaidCount: invoices.filter((inv: any) => inv.balance > 0 && inv.status !== 'overdue').length,
-          overdueCount: invoices.filter((inv: any) => inv.status === 'overdue').length
-        }
-        setStats(stats)
+        const totalInvoices = invoices.length
+        const totalRevenue = invoices.reduce((sum: number, inv: any) => sum + Number(inv.total_amount || 0), 0)
+        const paidCount = invoices.filter((inv: any) => Number(inv.balance) === 0).length
+        const overdueCount = invoices.filter((inv: any) => inv.status === 'overdue').length
+        const unpaidCount = totalInvoices - paidCount - overdueCount
+        setStats({ totalInvoices, totalRevenue, paidCount, unpaidCount, overdueCount })
       }
     } catch (error) {
       console.error('Error fetching invoice stats:', error)

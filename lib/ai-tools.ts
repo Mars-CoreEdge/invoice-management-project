@@ -201,8 +201,8 @@ export const invoiceTools = {
     parameters: invoiceSearchSchema,
     execute: async (params: any) => {
       try {
-        // Fetch real invoice data from the API
-        const response = await fetch('/api/ai/invoices');
+        // Fetch invoice data from the standard invoices API
+        const response = await fetch('/api/invoices');
         const result = await response.json();
         
         if (!result.success) {
@@ -212,7 +212,17 @@ export const invoiceTools = {
           };
         }
 
-        let invoices = result.data || [];
+        // Map to a common shape for filtering
+        let invoices = (result.data || []).map((inv: any) => ({
+          id: inv.id,
+          docNumber: inv.invoice_number || inv.docNumber,
+          txnDate: inv.created_at || inv.txnDate,
+          dueDate: inv.due_date || inv.dueDate,
+          totalAmount: inv.total_amount ?? inv.totalAmount ?? 0,
+          balance: inv.balance ?? 0,
+          customer: inv.customer_name || inv.customer || '',
+          status: inv.status || (inv.balance === 0 ? 'paid' : 'unpaid'),
+        }));
         
         // Apply filters
         if (params.customerId) {
@@ -483,7 +493,7 @@ export const invoiceTools = {
     execute: async (params: any) => {
       try {
         // Fetch real invoice data from the API
-        const response = await fetch('/api/ai/invoices');
+        const response = await fetch('/api/invoices');
         const result = await response.json();
         
         if (!result.success) {
@@ -495,7 +505,12 @@ export const invoiceTools = {
 
         const dateRange = getDateRange(params.period, params.startDate, params.endDate);
         
-        const invoices = (result.data || []).filter((i: any) =>
+        const invoices = (result.data || []).map((inv: any) => ({
+          txnDate: inv.created_at || inv.txnDate,
+          dueDate: inv.due_date || inv.dueDate,
+          totalAmount: inv.total_amount ?? inv.totalAmount ?? 0,
+          balance: inv.balance ?? 0,
+        })).filter((i: any) =>
           i.txnDate >= dateRange.start &&
           i.txnDate <= dateRange.end
         );

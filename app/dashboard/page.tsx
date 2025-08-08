@@ -31,8 +31,9 @@ export default function Dashboard() {
       const response = await fetch('/api/quickbooks/status')
       const result = await response.json()
       if (result.success) {
-        setQuickBooksStatus(result.status)
-        setIsQuickBooksConnected(result.status.isAuthenticated)
+        // API returns { success, connected, companyName?, realmId? }
+        setQuickBooksStatus(result)
+        setIsQuickBooksConnected(!!result.connected)
       }
     } catch (error) {
       console.error('Error checking QuickBooks status:', error)
