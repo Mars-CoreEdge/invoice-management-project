@@ -13,10 +13,13 @@
     "test:endpoints:full": "node scripts/test-endpoints.js",
     "test:endpoints:help": "node scripts/test-endpoints-simple.js --help",
     "test:quick": "node scripts/quick-test.js",
-    "setup:env": "node scripts/setup-env.js"
+    "setup:env": "node scripts/setup-env.js",
+    "profile:network": "node scripts/network-profiler.js",
+    "test:invite": "node scripts/test-invite.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.24",
+    "@sendgrid/mail": "^8.1.5",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
@@ -44,6 +47,7 @@
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.0.4",
     "postcss": "^8.4.32",
+    "puppeteer": "^24.16.0",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3"
   }

@@ -30,21 +30,28 @@ export function Header({ isConnected = false }: HeaderProps) {
   const { signOut } = useAuth()
   const { currentTeam } = useTeam()
 
-  // Fetch real invoice stats when connected and team is available
+  // Fetch invoice stats once when connected and team is available
   useEffect(() => {
     if (isConnected && currentTeam) {
       fetchInvoiceStats()
     }
-  }, [isConnected, currentTeam])
+    // do not refetch on every render; no interval here
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, currentTeam?.team_id])
 
   const fetchInvoiceStats = async () => {
     setLoading(true)
     try {
       if (!currentTeam) return
-      const response = await fetch(`/api/invoices?teamId=${currentTeam.team_id}`)
+      // Use QBO invoices to align with dashboard data and avoid teamId query loops
+      const response = await fetch('/api/invoices/qbo', { cache: 'no-store' })
       const result = await response.json()
       if (result.success && Array.isArray(result.data)) {
-        const invoices = result.data
+        const invoices = result.data.map((inv: any) => ({
+          total_amount: Number(inv.totalAmount || 0),
+          balance: Number(inv.balance || 0),
+          status: inv.status,
+        }))
         const totalInvoices = invoices.length
         const totalRevenue = invoices.reduce((sum: number, inv: any) => sum + Number(inv.total_amount || 0), 0)
         const paidCount = invoices.filter((inv: any) => Number(inv.balance) === 0).length

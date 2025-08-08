@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useChat } from 'ai/react'
 import { Button } from './ui/button'
+import { useTeam } from './TeamContext'
 
 interface Invoice {
   id: string
@@ -21,8 +22,11 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) {
+  const { currentTeam } = useTeam() as any
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: '/api/chat',
+    body: { teamId: currentTeam?.team_id },
+    sendExtraMessageFields: true,
     initialMessages: [
     {
         id: 'welcome',
@@ -226,7 +230,21 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
 
       {/* Input Form */}
       <div className="p-3 sm:p-4 lg:p-6 border-t border-white/10 relative z-10 flex-shrink-0">
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+        <form
+          onSubmit={(e) => {
+            // prevent double-submit and ensure body contains teamId
+            if (!currentTeam?.team_id) {
+              e.preventDefault()
+              return
+            }
+            const payload = {
+              messages,
+              teamId: currentTeam.team_id,
+            }
+            handleSubmit({ ...e, preventDefault: () => e.preventDefault(), currentTarget: e.currentTarget, target: e.target, body: payload } as any)
+          }}
+          className="space-y-3 sm:space-y-4"
+        >
           <div className="relative">
             <textarea
               value={input}

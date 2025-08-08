@@ -87,6 +87,19 @@ export default function Dashboard() {
     }
   }, [])
 
+  // Refresh status when window gains focus to avoid constant polling
+  useEffect(() => {
+    const onFocus = () => checkQuickBooksStatus()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus)
+      }
+    }
+  }, [])
+
   // Show loading state while checking authentication
   if (loading) {
     return (

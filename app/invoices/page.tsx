@@ -33,20 +33,42 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices()
+    const onFocus = () => fetchInvoices()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus)
+      }
+    }
   }, [currentTeam])
 
   const fetchInvoices = async () => {
-    if (!currentTeam) return
-
     try {
-      const response = await fetch(`/api/invoices?teamId=${currentTeam.team_id}`)
+      // Use QBO invoices so the page shows the same data as the dashboard integration
+      const response = await fetch('/api/invoices/qbo', { cache: 'no-store' })
       const result = await response.json()
       
       if (result.success) {
-        setInvoices(result.data || [])
+        const mapped = (result.data || []).map((inv: any) => ({
+          id: inv.id,
+          invoice_number: inv.docNumber,
+          customer_name: inv.customerRef?.name || inv.customerRef?.value || 'Unknown',
+          total_amount: Number(inv.totalAmount || 0),
+          balance: Number(inv.balance || 0),
+          status: inv.status === 'paid' ? 'paid' : inv.balance > 0 ? 'pending' : 'paid',
+          due_date: inv.dueDate,
+          created_at: inv.txnDate,
+          updated_at: inv.txnDate,
+        })) as Invoice[]
+        setInvoices(mapped)
+      } else {
+        setInvoices([])
       }
     } catch (error) {
       console.error('Error fetching invoices:', error)
+      setInvoices([])
     } finally {
       setLoading(false)
     }

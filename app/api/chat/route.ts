@@ -18,9 +18,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await (request as any).json()
-    const { message, teamId, history = [] } = body
+    const { message, messages, teamId } = body
+    // Support both shapes: { message, history } and { messages: [{role,content}...] }
+    let finalMessage: string | null = null
+    let history: Array<{ role: 'user' | 'assistant'; content: string }> = []
 
-    if (!message || typeof message !== 'string') {
+    if (typeof message === 'string' && message.trim()) {
+      finalMessage = message.trim()
+      history = Array.isArray(body.history)
+        ? body.history.map((m: any) => ({ role: m.role, content: m.content }))
+        : []
+    } else if (Array.isArray(messages) && messages.length > 0) {
+      const lastUser = [...messages].reverse().find((m: any) => m.role === 'user')
+      finalMessage = lastUser?.content || null
+      history = messages
+        .slice(0, -1)
+        .map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+    }
+
+    if (!finalMessage) {
       return NextResponse.json(
         { success: false, error: 'Message is required' },
         { status: 400 }
@@ -73,19 +89,19 @@ Please provide helpful, accurate, and actionable responses. If you need to perfo
 Always be professional, concise, and focus on practical business advice.`
 
     // Prepare conversation history
-    const messages = [
+    const messagesForModel = [
       { role: 'system' as const, content: systemPrompt },
       ...history.map((msg: any) => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content
       })),
-      { role: 'user' as const, content: message }
+      { role: 'user' as const, content: finalMessage }
     ]
 
     // Generate AI response
     const result = await generateText({
       model: openai('gpt-4'),
-      messages,
+      messages: messagesForModel,
       maxTokens: 1000,
       temperature: 0.7,
     })

@@ -96,7 +96,7 @@ export function QuickBooksIntegration() {
           message: (status.isAuthenticated ?? status.connected) ? 'Connected to QuickBooks' : 'Not connected'
         })
         
-        if (status.isAuthenticated) {
+        if (status.isAuthenticated ?? status.connected) {
           // Fetch invoices if connected
           fetchInvoices()
         }
@@ -110,6 +110,30 @@ export function QuickBooksIntegration() {
       setIsCheckingStatus(false)
     }
   }
+
+  // When connection flips to connected, fetch automatically (no manual refresh required)
+  useEffect(() => {
+    if (quickBooksStatus?.connected && invoices.length === 0 && !loading) {
+      fetchInvoices()
+    }
+  }, [quickBooksStatus?.connected])
+
+  // Refresh invoices on window focus if connected
+  useEffect(() => {
+    const onFocus = () => {
+      if (quickBooksStatus?.connected) {
+        fetchInvoices()
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus)
+      }
+    }
+  }, [quickBooksStatus?.connected])
 
   const handleConnectQuickBooks = () => {
     setIsConnecting(true)

@@ -1,11 +1,11 @@
 {
-  "timestamp": "2025-08-07T23:59:10.221Z",
+  "timestamp": "2025-08-08T22:13:15.786Z",
   "baseUrl": "http://localhost:3000",
   "summary": {
     "total": 20,
-    "passed": 20,
-    "failed": 0,
-    "successRate": "100.0"
+    "passed": 19,
+    "failed": 1,
+    "successRate": "95.0"
   },
   "details": [
     {
@@ -49,22 +49,22 @@
       "details": ""
     },
     {
-      "name": "Teams - GET /api/teams/bea847db-3317-4aae-b288-bd67222b1c96",
+      "name": "Teams - GET /api/teams/f01eafe7-0c5f-47d5-89e9-ec1f20a1931b",
       "status": "PASS",
       "details": ""
     },
     {
-      "name": "Teams - PUT /api/teams/bea847db-3317-4aae-b288-bd67222b1c96",
+      "name": "Teams - PUT /api/teams/f01eafe7-0c5f-47d5-89e9-ec1f20a1931b",
       "status": "PASS",
       "details": ""
     },
     {
-      "name": "Teams - GET /api/teams/bea847db-3317-4aae-b288-bd67222b1c96/members",
+      "name": "Teams - GET /api/teams/f01eafe7-0c5f-47d5-89e9-ec1f20a1931b/members",
       "status": "PASS",
       "details": ""
     },
     {
-      "name": "Teams - POST /api/teams/bea847db-3317-4aae-b288-bd67222b1c96/invite",
+      "name": "Teams - POST /api/teams/f01eafe7-0c5f-47d5-89e9-ec1f20a1931b/invite",
       "status": "PASS",
       "details": ""
     },
@@ -75,8 +75,8 @@
     },
     {
       "name": "Invoices - POST /api/invoices",
-      "status": "PASS",
-      "details": ""
+      "status": "FAIL",
+      "details": "Status: 500"
     },
     {
       "name": "Chat - POST /api/chat",
@@ -96,17 +96,17 @@
     {
       "name": "QBO - GET /api/qbo/company",
       "status": "PASS",
-      "details": "Not connected (expected in dev)"
+      "details": ""
     },
     {
       "name": "QBO - GET /api/qbo/customers",
       "status": "PASS",
-      "details": "Not connected (expected in dev)"
+      "details": ""
     },
     {
       "name": "QBO - GET /api/qbo/items",
       "status": "PASS",
-      "details": "Not connected (expected in dev)"
+      "details": ""
     }
   ]
 }
