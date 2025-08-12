@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useChat } from 'ai/react'
 import { Button } from './ui/button'
 import { useTeam } from './TeamContext'
@@ -24,7 +24,10 @@ interface ChatPanelProps {
 export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) {
   const { currentTeam } = useTeam() as any
   // Stable chat id per team to persist history across re-renders and tab switches
-  const chatId = useMemo(() => `dashboard-chat-${currentTeam?.team_id ?? 'anonymous'}`, [currentTeam?.team_id])
+  const [chatId, setChatId] = useState(`dashboard-chat-${currentTeam?.team_id ?? 'anonymous'}`)
+  useEffect(() => {
+    setChatId(`dashboard-chat-${currentTeam?.team_id ?? 'anonymous'}`)
+  }, [currentTeam?.team_id])
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
     api: '/api/chat',
@@ -260,16 +263,8 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
       <div className="p-3 sm:p-4 lg:p-6 border-t border-white/10 relative z-10 flex-shrink-0">
         <form
           onSubmit={(e) => {
-            // prevent double-submit and ensure body contains teamId
-            if (!currentTeam?.team_id) {
-              e.preventDefault()
-              return
-            }
-            const payload = {
-              messages,
-              teamId: currentTeam.team_id,
-            }
-            handleSubmit({ ...e, preventDefault: () => e.preventDefault(), currentTarget: e.currentTarget, target: e.target, body: payload } as any)
+            // Let the hook handle payload; it already includes teamId via `body`
+            handleSubmit(e)
           }}
           className="space-y-3 sm:space-y-4"
         >

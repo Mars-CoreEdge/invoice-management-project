@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
 import { getTeamService } from '@/lib/team-service'
 import { openai } from '@ai-sdk/openai'
-import { generateText } from 'ai'
+import { streamText } from 'ai'
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,28 +88,25 @@ Please provide helpful, accurate, and actionable responses. If you need to perfo
 
 Always be professional, concise, and focus on practical business advice.`
 
-    // Prepare conversation history
+    // Prepare conversation history for streaming
     const messagesForModel = [
       { role: 'system' as const, content: systemPrompt },
       ...history.map((msg: any) => ({
         role: msg.role as 'user' | 'assistant',
-        content: msg.content
+        content: msg.content,
       })),
-      { role: 'user' as const, content: finalMessage }
+      { role: 'user' as const, content: finalMessage },
     ]
 
-    // Generate AI response
-    const result = await generateText({
+    // Stream the response in the format expected by useChat
+    const result = await streamText({
       model: openai('gpt-4'),
       messages: messagesForModel,
       maxTokens: 1000,
       temperature: 0.7,
     })
 
-    return NextResponse.json({
-      success: true,
-      message: result.text
-    })
+    return result.toAIStreamResponse()
   } catch (error) {
     console.error('Error in chat API:', error)
     return NextResponse.json(

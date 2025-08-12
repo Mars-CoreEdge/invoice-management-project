@@ -5,6 +5,7 @@ declare module 'react' {
   export function useEffect(effect: () => void | (() => void), deps?: any[]): void;
   export function useRef<T>(initial?: T | null): { current: T | null };
   export function useCallback<T extends (...args: any[]) => any>(fn: T, deps: any[]): T;
+  export function useMemo<T>(factory: () => T, deps: any[]): T;
   export function forwardRef<T, P = {}>(render: (props: P, ref: any) => any): any;
   export namespace React {
     interface ButtonHTMLAttributes<T> {

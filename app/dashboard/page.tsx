@@ -19,7 +19,8 @@ export default function Dashboard() {
   const loading = auth?.loading
   const teamCtx: any = useTeam()
   const currentTeam = teamCtx?.currentTeam
-  const [isQuickBooksConnected, setIsQuickBooksConnected] = useState(false)
+  // null means unknown/loading, true/false are definitive states
+  const [isQuickBooksConnected, setIsQuickBooksConnected] = useState<boolean | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
   const [quickBooksStatus, setQuickBooksStatus] = useState<any>(null)
@@ -125,7 +126,19 @@ export default function Dashboard() {
 
   // Do not unmount the page while checking status; keep UI mounted to preserve state
 
-  if (!isQuickBooksConnected) {
+  // While QuickBooks status is loading, avoid flashing the connect screen
+  if (isQuickBooksConnected === null) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="text-white/90 text-lg">Checking QuickBooks status...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isQuickBooksConnected === false) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col relative overflow-hidden">
         {/* Animated Background Elements */}
