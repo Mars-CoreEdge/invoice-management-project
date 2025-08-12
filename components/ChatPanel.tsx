@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useChat } from 'ai/react'
 import { Button } from './ui/button'
 import { useTeam } from './TeamContext'
@@ -23,10 +23,16 @@ interface ChatPanelProps {
 
 export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) {
   const { currentTeam } = useTeam() as any
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  // Stable chat id per team to persist history across re-renders and tab switches
+  const chatId = useMemo(() => `dashboard-chat-${currentTeam?.team_id ?? 'anonymous'}`, [currentTeam?.team_id])
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
     api: '/api/chat',
     body: { teamId: currentTeam?.team_id },
     sendExtraMessageFields: true,
+    id: chatId,
+    // Persist messages in localStorage to prevent disappearance on refresh/unmount
+    storageKey: `chat:${chatId}`,
     initialMessages: [
     {
         id: 'welcome',
@@ -36,11 +42,33 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
     ],
     onFinish: (message) => {
       console.log('Message finished:', message);
+      try {
+        const key = `chat:${chatId}`
+        const allMessages = [...messages, message]
+        localStorage.setItem(key, JSON.stringify({ messages: allMessages }))
+      } catch {}
     },
     onError: (error) => {
       console.error('Chat error:', error);
     }
   })
+
+  // Restore messages from localStorage on mount if present
+  useEffect(() => {
+    try {
+      const key = `chat:${chatId}`
+      const stored = localStorage.getItem(key)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
+          if (typeof setMessages === 'function') {
+            setMessages(parsed.messages as any)
+          }
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -219,7 +247,7 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
           </div>
         )}
         
-        {messages.length === 1 && !isLoading && (
+        {messages.length <= 1 && !isLoading && (
           <div className="text-center text-white/60 py-6 sm:py-8">
             <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">💬</div>
             <p className="text-base sm:text-lg mb-2">Ready to help with your business!</p>

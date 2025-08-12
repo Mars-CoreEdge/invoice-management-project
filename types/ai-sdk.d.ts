@@ -15,6 +15,7 @@ declare module 'ai/react' {
     handleInputChange: (e: any) => void;
     handleSubmit: (e: any) => void;
     isLoading: boolean;
+    setMessages: (msgs: any[]) => void;
   };
 }
 

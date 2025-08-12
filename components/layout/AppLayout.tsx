@@ -4,8 +4,9 @@ import { useAuth } from '@/components/AuthContext'
 import { useTeam } from '@/components/TeamContext'
 import { Header } from '@/components/Header'
 import { Sidebar } from './Sidebar'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+// no Link import needed here
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -15,13 +16,14 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, loading: authLoading } = useAuth()
   const { currentTeam, loading: teamLoading } = useTeam()
   const pathname = usePathname()
+  const router = useRouter()
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      window.location.href = '/auth/login'
+      router.push('/auth/login')
     }
-  }, [user, authLoading])
+  }, [user, authLoading, router])
 
   // Show loading state
   if (authLoading || teamLoading) {
@@ -32,40 +34,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     )
   }
 
-  // Show no team state
-  if (!currentTeam) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full mx-auto">
-          <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/20">
-            <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-3xl">👥</span>
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-4">
-              No Team Selected
-            </h1>
-            <p className="text-purple-200 mb-6">
-              You need to be part of a team to access the invoice management system.
-            </p>
-            <div className="space-y-3">
-              <a
-                href="/teams/new"
-                className="block w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0"
-              >
-                Create New Team
-              </a>
-              <a
-                href="/teams"
-                className="block w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 py-3 px-6 rounded-2xl"
-              >
-                View My Teams
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Note: Do NOT block rendering when no team is selected. Pages that require a team
+  // should handle that themselves. This avoids unmounting dashboard content and losing
+  // client state (e.g., chat messages) during background checks or tab focus events.
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col relative overflow-hidden">

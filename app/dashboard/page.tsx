@@ -114,36 +114,8 @@ export default function Dashboard() {
     return null
   }
 
-  // Show no team state
-  if (!currentTeam) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full mx-auto">
-          <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/20">
-            <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-3xl">👥</span>
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-4">No Team Selected</h1>
-            <p className="text-purple-200 mb-6">
-              You need to be part of a team to access the dashboard.
-            </p>
-            <div className="space-y-3">
-              <Link href="/teams/new">
-                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0">
-                  Create New Team
-                </Button>
-              </Link>
-              <Link href="/teams">
-                <Button className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 py-3 px-6 rounded-2xl">
-                  View My Teams
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Do not block the dashboard when no team is selected. We'll prioritize
+  // QuickBooks connection first, and only then ask for team selection.
 
   // QuickBooks connect is handled by API route which redirects to external OAuth
 
@@ -151,13 +123,7 @@ export default function Dashboard() {
     setSelectedInvoice(invoice)
   }
 
-  if (checkingStatus) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading dashboard...</div>
-      </div>
-    )
-  }
+  // Do not unmount the page while checking status; keep UI mounted to preserve state
 
   if (!isQuickBooksConnected) {
     return (
@@ -280,6 +246,37 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // After QuickBooks is connected, if no team is selected, prompt for team
+  if (!currentTeam) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full mx-auto">
+          <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/20">
+            <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-3xl">👥</span>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-4">No Team Selected</h1>
+            <p className="text-purple-200 mb-6">
+              You need to be part of a team to access the dashboard.
+            </p>
+            <div className="space-y-3">
+              <Link href="/teams/new">
+                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-0">
+                  Create New Team
+                </Button>
+              </Link>
+              <Link href="/teams">
+                <Button className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 py-3 px-6 rounded-2xl">
+                  View My Teams
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
