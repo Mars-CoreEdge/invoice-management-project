@@ -290,6 +290,11 @@ OPENAI_API_KEY=sk-proj-GzM3XMUicA2tSHidAmy3XbkfbkZu9-3-qlgYoNavWQaZdgG0ZjhapF4Tz
                   View My Teams
                 </Button>
               </Link>
+              <Link href="/dashboard">
+                <Button className="w-full bg-white/5 backdrop-blur-sm border border-white/10 text-white hover:bg-white/15 transition-all duration-300 py-3 px-6 rounded-2xl">
+                  Go to Dashboard
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

@@ -183,13 +183,7 @@ export function ChatPanel({ selectedInvoice, onInvoiceSelect }: ChatPanelProps) 
       {/* Messages */}
       <div 
         id="messages-container" 
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 relative z-10 min-h-0 scroll-smooth
-                   scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-purple-500/50 
-                   hover:scrollbar-thumb-purple-500/70 scrollbar-track-rounded-full scrollbar-thumb-rounded-full"
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(147, 51, 234, 0.5) rgba(255, 255, 255, 0.05)'
-        }}
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 relative z-10 min-h-0 scroll-smooth scrollbar-themed"
       >
         {messages.map((message) => (
           <div

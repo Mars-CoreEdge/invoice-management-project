@@ -129,12 +129,7 @@ export function InvoicePanel({ selectedInvoice, onInvoiceSelect }: InvoicePanelP
       {/* Invoice List */}
       <div 
         className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 relative z-10 min-h-0 scroll-smooth
-                   scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-blue-500/50 
-                   hover:scrollbar-thumb-blue-500/70 scrollbar-track-rounded-full scrollbar-thumb-rounded-full"
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(59, 130, 246, 0.5) rgba(255, 255, 255, 0.05)'
-        }}
+                   scrollbar-themed"
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-32">

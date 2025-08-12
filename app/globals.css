@@ -58,51 +58,41 @@
   }
 }
 
-/* Custom Scrollbar Styles for Glass Morphism Design */
+/* Theme-aware Scrollbar Styles */
 @layer utilities {
-  /* Webkit browsers (Chrome, Safari, Edge) */
-  .custom-scrollbar::-webkit-scrollbar {
+  /* Expose theme-driven scrollbar colors via CSS variables */
+  :root {
+    --scrollbar-track: hsl(var(--muted) / 0.1);
+    --scrollbar-thumb: hsl(var(--primary) / 0.5);
+    --scrollbar-thumb-hover: hsl(var(--primary) / 0.7);
+  }
+  .dark {
+    --scrollbar-track: hsl(var(--accent) / 0.2);
+    --scrollbar-thumb: hsl(var(--primary) / 0.6);
+    --scrollbar-thumb-hover: hsl(var(--primary) / 0.8);
+  }
+
+  /* Apply to any scrollable area by adding the class */
+  .scrollbar-themed {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  /* WebKit browsers (Chrome, Edge, Safari) */
+  .scrollbar-themed::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-  
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
+  .scrollbar-themed::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
     border-radius: 12px;
-    backdrop-filter: blur(8px);
   }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(147, 51, 234, 0.5);
+  .scrollbar-themed::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
+    border: 1px solid hsl(var(--background) / 0.15);
   }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(147, 51, 234, 0.7);
-    border-color: rgba(255, 255, 255, 0.2);
+  .scrollbar-themed:hover::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-hover);
   }
-  
-  .custom-scrollbar::-webkit-scrollbar-corner {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  /* Chat Panel Purple Scrollbar */
-  .chat-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, rgba(147, 51, 234, 0.6), rgba(236, 72, 153, 0.6));
-  }
-  
-  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(236, 72, 153, 0.8));
-  }
-
-  /* Invoice Panel Purple Scrollbar - Now matches chat panel */
-  .invoice-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, rgba(147, 51, 234, 0.6), rgba(236, 72, 153, 0.6));
-  }
-  
-  .invoice-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(236, 72, 153, 0.8));
-  }
-} 
+}
