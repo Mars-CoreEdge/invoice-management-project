@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Users, ArrowLeft } from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const Users: any = (Lucide as any).Users || ((props: any) => <i {...props} />)
+const ArrowLeft: any = (Lucide as any).ArrowLeft || ((props: any) => <i {...props} />)
 
 export default function CreateTeamPage() {
   const [teamName, setTeamName] = useState('')

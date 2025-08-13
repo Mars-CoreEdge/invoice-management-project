@@ -5,15 +5,14 @@ import { useTeam } from '@/components/TeamContext'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { 
-  Users, 
-  Plus, 
-  Settings, 
-  UserPlus, 
-  Crown,
-  Shield,
-  Eye
-} from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const Users: any = (Lucide as any).Users || ((props: any) => <i {...props} />)
+const Plus: any = (Lucide as any).Plus || ((props: any) => <i {...props} />)
+const Settings: any = (Lucide as any).Settings || ((props: any) => <i {...props} />)
+const UserPlus: any = (Lucide as any).UserPlus || ((props: any) => <i {...props} />)
+const Crown: any = (Lucide as any).Crown || ((props: any) => <i {...props} />)
+const Shield: any = (Lucide as any).Shield || ((props: any) => <i {...props} />)
+const Eye: any = (Lucide as any).Eye || ((props: any) => <i {...props} />)
 import { UserTeam } from '@/types/teams'
 
 export default function TeamsPage() {

@@ -1,6 +1,8 @@
 'use client'
 
-import { Github, Chrome } from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const Github: any = (Lucide as any).Github || ((props: any) => <i {...props} />)
+const Chrome: any = (Lucide as any).Chrome || ((props: any) => <i {...props} />)
 import { useAuth } from './AuthContext'
 
 interface OAuthButtonsProps {

@@ -6,20 +6,19 @@ import { useTeam } from '@/components/TeamContext'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { 
-  FileText, 
-  Edit, 
-  Download, 
-  ArrowLeft,
-  DollarSign,
-  Calendar,
-  User,
-  Building,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Printer
-} from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const FileText: any = (Lucide as any).FileText || ((props: any) => <i {...props} />)
+const Edit: any = (Lucide as any).Edit || ((props: any) => <i {...props} />)
+const Download: any = (Lucide as any).Download || ((props: any) => <i {...props} />)
+const ArrowLeft: any = (Lucide as any).ArrowLeft || ((props: any) => <i {...props} />)
+const DollarSign: any = (Lucide as any).DollarSign || ((props: any) => <i {...props} />)
+const Calendar: any = (Lucide as any).Calendar || ((props: any) => <i {...props} />)
+const User: any = (Lucide as any).User || ((props: any) => <i {...props} />)
+const Building: any = (Lucide as any).Building || ((props: any) => <i {...props} />)
+const CheckCircle: any = (Lucide as any).CheckCircle || ((props: any) => <i {...props} />)
+const Clock: any = (Lucide as any).Clock || ((props: any) => <i {...props} />)
+const AlertTriangle: any = (Lucide as any).AlertTriangle || ((props: any) => <i {...props} />)
+const Printer: any = (Lucide as any).Printer || ((props: any) => <i {...props} />)
 
 interface InvoiceItem {
   id: string

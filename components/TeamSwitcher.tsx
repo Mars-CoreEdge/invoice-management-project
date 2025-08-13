@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import { useTeam } from './TeamContext'
-import { ChevronDown, Users, Plus } from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const ChevronDown: any = (Lucide as any).ChevronDown || ((props: any) => <i {...props} />)
+const Users: any = (Lucide as any).Users || ((props: any) => <i {...props} />)
+const Plus: any = (Lucide as any).Plus || ((props: any) => <i {...props} />)
 import Link from 'next/link'
 
 export function TeamSwitcher() {

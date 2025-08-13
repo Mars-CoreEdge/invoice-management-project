@@ -5,23 +5,22 @@ import { useAuth } from '@/components/AuthContext'
 import { useTeam } from '@/components/TeamContext'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
-import { 
-  Settings, 
-  Users, 
-  Shield, 
-  Bell, 
-  Palette, 
-  Database,
-  Key,
-  Globe,
-  CreditCard,
-  FileText,
-  Trash2,
-  Edit,
-  Plus,
-  Check,
-  X
-} from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const Settings: any = (Lucide as any).Settings || ((props: any) => <i {...props} />)
+const Users: any = (Lucide as any).Users || ((props: any) => <i {...props} />)
+const Shield: any = (Lucide as any).Shield || ((props: any) => <i {...props} />)
+const Bell: any = (Lucide as any).Bell || ((props: any) => <i {...props} />)
+const Palette: any = (Lucide as any).Palette || ((props: any) => <i {...props} />)
+const Database: any = (Lucide as any).Database || ((props: any) => <i {...props} />)
+const Key: any = (Lucide as any).Key || ((props: any) => <i {...props} />)
+const Globe: any = (Lucide as any).Globe || ((props: any) => <i {...props} />)
+const CreditCard: any = (Lucide as any).CreditCard || ((props: any) => <i {...props} />)
+const FileText: any = (Lucide as any).FileText || ((props: any) => <i {...props} />)
+const Trash2: any = (Lucide as any).Trash2 || ((props: any) => <i {...props} />)
+const Edit: any = (Lucide as any).Edit || ((props: any) => <i {...props} />)
+const Plus: any = (Lucide as any).Plus || ((props: any) => <i {...props} />)
+const Check: any = (Lucide as any).Check || ((props: any) => <i {...props} />)
+const X: any = (Lucide as any).X || ((props: any) => <i {...props} />)
 
 interface TeamMember {
   id: string
@@ -49,7 +48,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [teamSettings, setTeamSettings] = useState<TeamSettings>({
     team_name: currentTeam?.team_name || '',
-    description: currentTeam?.description || '',
+    description: '',
     timezone: 'America/New_York',
     currency: 'USD',
     tax_rate: 8.0,

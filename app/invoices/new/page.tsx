@@ -5,17 +5,16 @@ import { useTeam } from '@/components/TeamContext'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
-import { 
-  FileText, 
-  Plus, 
-  Trash2, 
-  Save,
-  ArrowLeft,
-  DollarSign,
-  Calendar,
-  User,
-  Building
-} from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const FileText: any = (Lucide as any).FileText || ((props: any) => <i {...props} />)
+const Plus: any = (Lucide as any).Plus || ((props: any) => <i {...props} />)
+const Trash2: any = (Lucide as any).Trash2 || ((props: any) => <i {...props} />)
+const Save: any = (Lucide as any).Save || ((props: any) => <i {...props} />)
+const ArrowLeft: any = (Lucide as any).ArrowLeft || ((props: any) => <i {...props} />)
+const DollarSign: any = (Lucide as any).DollarSign || ((props: any) => <i {...props} />)
+const Calendar: any = (Lucide as any).Calendar || ((props: any) => <i {...props} />)
+const User: any = (Lucide as any).User || ((props: any) => <i {...props} />)
+const Building: any = (Lucide as any).Building || ((props: any) => <i {...props} />)
 import Link from 'next/link'
 
 interface InvoiceItem {

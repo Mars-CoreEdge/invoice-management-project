@@ -8,6 +8,7 @@ interface ButtonProps {
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
   children?: any;
+  title?: string;
 }
 
 export function Button({ 

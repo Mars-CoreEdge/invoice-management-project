@@ -5,18 +5,17 @@ import { useParams, useRouter } from 'next/navigation'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { 
-  Users, 
-  UserPlus, 
-  Settings, 
-  Crown,
-  Shield,
-  Eye,
-  Trash2,
-  Edit,
-  Mail,
-  Calendar
-} from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const Users: any = (Lucide as any).Users || ((props: any) => <i {...props} />)
+const UserPlus: any = (Lucide as any).UserPlus || ((props: any) => <i {...props} />)
+const Settings: any = (Lucide as any).Settings || ((props: any) => <i {...props} />)
+const Crown: any = (Lucide as any).Crown || ((props: any) => <i {...props} />)
+const Shield: any = (Lucide as any).Shield || ((props: any) => <i {...props} />)
+const Eye: any = (Lucide as any).Eye || ((props: any) => <i {...props} />)
+const Trash2: any = (Lucide as any).Trash2 || ((props: any) => <i {...props} />)
+const Edit: any = (Lucide as any).Edit || ((props: any) => <i {...props} />)
+const Mail: any = (Lucide as any).Mail || ((props: any) => <i {...props} />)
+const Calendar: any = (Lucide as any).Calendar || ((props: any) => <i {...props} />)
 import { Team, TeamMember } from '@/types/teams'
 
 interface TeamDetails extends Team {
@@ -213,12 +212,12 @@ export default function TeamManagementPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
                       <span className="text-white font-medium">
-                        {member.users?.email?.charAt(0).toUpperCase() || 'U'}
+                        {(member as any).users?.email?.charAt(0).toUpperCase() || 'U'}
                       </span>
                     </div>
                     <div>
                       <div className="text-white font-medium">
-                        {member.users?.email || 'Unknown User'}
+                        {(member as any).users?.email || 'Unknown User'}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         {getRoleIcon(member.role)}

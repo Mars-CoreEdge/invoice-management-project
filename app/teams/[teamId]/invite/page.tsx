@@ -5,7 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Mail, ArrowLeft, Shield, Settings, Eye } from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const Mail: any = (Lucide as any).Mail || ((props: any) => <i {...props} />)
+const ArrowLeft: any = (Lucide as any).ArrowLeft || ((props: any) => <i {...props} />)
+const Shield: any = (Lucide as any).Shield || ((props: any) => <i {...props} />)
+const Settings: any = (Lucide as any).Settings || ((props: any) => <i {...props} />)
+const Eye: any = (Lucide as any).Eye || ((props: any) => <i {...props} />)
 import { TeamRole } from '@/types/teams'
 
 export default function InviteMemberPage() {

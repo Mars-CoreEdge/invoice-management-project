@@ -42,53 +42,13 @@ export default function AnalyticsPage() {
 
   const fetchAnalytics = async () => {
     try {
-      // Pull invoices for current team and compute metrics client-side
-      const res = await fetch(`/api/invoices?teamId=${currentTeam?.team_id}`)
+      setLoading(true)
+      const res = await fetch(`/api/analytics?teamId=${currentTeam?.team_id}&range=${timeRange}`, {
+        headers: { 'Accept': 'application/json' }
+      })
+      if (!res.ok) throw new Error(`Failed: ${res.status}`)
       const json = await res.json()
-      const invoices = Array.isArray(json.data) ? json.data : []
-console.log(invoices)
-      // Filter by time range
-      const now = new Date()
-      const cutoff = new Date(
-        timeRange === '7d' ? now.getTime() - 7*86400000 :
-        timeRange === '30d' ? now.getTime() - 30*86400000 :
-        timeRange === '90d' ? now.getTime() - 90*86400000 :
-        now.getTime() - 365*86400000
-      )
-
-      const rangeInvoices = invoices.filter((i: any) => new Date(i.created_at) >= cutoff)
-      const totalRevenue = rangeInvoices.reduce((s: number, i: any) => s + Number(i.total_amount||0), 0)
-      const paid = rangeInvoices.filter((i: any) => Number(i.balance) === 0)
-      const overdue = rangeInvoices.filter((i: any) => i.status === 'overdue')
-      const pending = rangeInvoices.filter((i: any) => i.status === 'pending' || (Number(i.balance) > 0 && i.status !== 'overdue'))
-
-      const avg = rangeInvoices.length ? totalRevenue / rangeInvoices.length : 0
-      const mockData: AnalyticsData = {
-        totalInvoices: 156,
-        totalRevenue: Number(totalRevenue.toFixed(2)),
-        paidInvoices: paid.length,
-        pendingInvoices: pending.length,
-        overdueInvoices: overdue.length,
-        averageInvoiceValue: Number(avg.toFixed(2)),
-        monthlyGrowth: 12.5,
-        topCustomers: [
-          { name: 'Acme Corporation', total: 25000, count: 8 },
-          { name: 'Tech Solutions Inc', total: 18000, count: 6 },
-          { name: 'Global Industries', total: 15000, count: 5 },
-          { name: 'Enterprise Solutions', total: 12000, count: 4 },
-          { name: 'Startup Ventures', total: 8000, count: 3 }
-        ],
-        monthlyRevenue: [
-          { month: 'Jan', revenue: 18000 },
-          { month: 'Feb', revenue: 22000 },
-          { month: 'Mar', revenue: 19000 },
-          { month: 'Apr', revenue: 25000 },
-          { month: 'May', revenue: 28000 },
-          { month: 'Jun', revenue: 32000 }
-        ]
-      }
-
-      setAnalytics(mockData)
+      setAnalytics(json.data)
     } catch (error) {
       console.error('Error fetching analytics:', error)
     } finally {
@@ -338,7 +298,7 @@ console.log(invoices)
                 <span className="text-white font-medium">Customer Focus</span>
               </div>
               <p className="text-purple-200 text-sm">
-                Top 5 customers account for {Math.round((analytics.topCustomers.reduce((sum, c) => sum + c.total, 0) / analytics.totalRevenue) * 100)}% of revenue.
+                Top 5 customers account for {analytics.totalRevenue ? Math.round((analytics.topCustomers.reduce((sum, c) => sum + c.total, 0) / analytics.totalRevenue) * 100) : 0}% of revenue.
               </p>
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4">

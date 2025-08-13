@@ -72,17 +72,21 @@ export async function getTeamQuickBooksData(
     dataType === 'company' ? 'can_manage_quickbooks' : 'can_view_invoices';
 
   return withTeamPermission(userId, teamId, requiredPermission, async (context) => {
-    const qboSession = getQBOSessionManager();
-    
+    const manager = getQBOSessionManager();
+    const session = await manager.getSession(userId);
+    if (!session) {
+      throw new Error('QuickBooks session not found for user');
+    }
+
     switch (dataType) {
       case 'invoices':
-        return await qboSession.getInvoices();
+        return await manager.getInvoices(session);
       case 'customers':
-        return await qboSession.getCustomers();
+        return await manager.getCustomers(session);
       case 'items':
-        return await qboSession.getItems();
+        return await manager.getItems(session);
       case 'company':
-        return await qboSession.getCompanyInfo();
+        return await manager.getCompanyInfo(session);
       default:
         throw new Error(`Unknown data type: ${dataType}`);
     }
