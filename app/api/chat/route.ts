@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
 import { getTeamService } from '@/lib/team-service'
 import { openai } from '@ai-sdk/openai'
-import { streamText } from 'ai'
+import { streamText, tool } from 'ai'
+import { getQBOSessionManager } from '@/lib/qbo-session'
 
 export async function POST(request: Request) {
   try {
@@ -70,23 +71,18 @@ export async function POST(request: Request) {
       )
     }
 
-    // Build system prompt with team context
-    const systemPrompt = `You are an AI assistant for the invoice management system. You're helping the team "${team.team_name}" with their invoice management tasks.
+    // Build system prompt with team context and tool usage
+    const systemPrompt = `You are an AI assistant for the invoice management system, helping team "${team.team_name}".
 
-Your capabilities include:
-- Creating and managing invoices
-- Analyzing invoice data and trends
-- Providing business insights
-- QuickBooks integration support
-- Financial reporting and analysis
+Capabilities:
+- Create, update, delete, and list invoices from QuickBooks sandbox
+- Analyze invoice trends and provide insights
 
-Current user role: ${roleCheck.user_role}
-Team: ${team.team_name}
-${team.description ? `Team description: ${team.description}` : ''}
+Tool usage:
+- When users request real data (e.g., "show my invoices"), call the appropriate tool instead of returning JSON or pseudo-code.
+- After using a tool, present clear, concise results (bulleted list or table-like text). Do not return raw JSON.
 
-Please provide helpful, accurate, and actionable responses. If you need to perform specific actions like creating invoices or accessing data, let the user know what information you need.
-
-Always be professional, concise, and focus on practical business advice.`
+Keep responses professional and business-focused.`
 
     // Prepare conversation history for streaming
     const messagesForModel = [
@@ -98,10 +94,41 @@ Always be professional, concise, and focus on practical business advice.`
       { role: 'user' as const, content: finalMessage },
     ]
 
-    // Stream the response in the format expected by useChat
+    // Define tools the model can invoke
+    const listInvoices = tool({
+      description: 'List recent QuickBooks invoices for the current team',
+      parameters: {
+        type: 'object',
+        properties: {
+          limit: { type: 'number', description: 'Max number of invoices to return', default: 10 },
+        },
+      },
+      execute: async ({ limit = 10 }: any) => {
+        const manager = getQBOSessionManager()
+        const session = await manager.getSession(user.id)
+        if (!session) return 'QuickBooks is not connected. Please connect QuickBooks first.'
+        const result = await manager.getInvoices(session, Math.max(1, Math.min(50, Number(limit) || 10)), 0)
+        if (!result.success) return `Failed to fetch invoices: ${result.error || 'Unknown error'}`
+        const rows: any[] = Array.isArray(result.data) ? result.data : []
+        if (rows.length === 0) return 'No invoices found.'
+        const lines = rows.slice(0, limit).map((inv: any) => {
+          const doc = inv.DocNumber || inv.docNumber || inv.Id
+          const date = inv.TxnDate || inv.txnDate || inv.MetaData?.CreateTime?.slice(0,10) || ''
+          const total = typeof inv.TotalAmt !== 'undefined' ? inv.TotalAmt : (inv.totalAmount || 0)
+          const bal = typeof inv.Balance !== 'undefined' ? inv.Balance : (inv.balance || 0)
+          const status = Number(bal) === 0 ? 'paid' : 'unpaid'
+          const name = inv.CustomerRef?.name || inv.customer_name || inv.CustomerRef || 'Customer'
+          return `- ${doc} • ${name} • ${date} • Total $${Number(total).toFixed(2)} • ${status}`
+        })
+        return `Here are your recent invoices:\n${lines.join('\n')}`
+      },
+    })
+
+    // Stream the response with tools enabled (compatible with useChat)
     const result = await streamText({
       model: openai('gpt-4'),
       messages: messagesForModel,
+      tools: { listInvoices },
       maxTokens: 1000,
       temperature: 0.7,
     })

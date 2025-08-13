@@ -180,6 +180,72 @@ export class QBOSessionManager {
   }
 
   /**
+   * Get a single invoice by Id
+   */
+  async getInvoiceById(session: QBOSession, id: string): Promise<QBOOperationResult> {
+    try {
+      const query = `SELECT * FROM Invoice WHERE Id = '${id.replace(/'/g, "''")}'`;
+      const minorversion = 65;
+      const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${session.realmId}/query?query=${encodeURIComponent(query)}&minorversion=${minorversion}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.Fault) {
+        return {
+          success: false,
+          error: `QuickBooks API Error: ${JSON.stringify(data.Fault)}`
+        };
+      }
+
+      const invoice = (data.QueryResponse?.Invoice || [])[0] || null;
+      return { success: true, data: invoice, session };
+    } catch (error: any) {
+      return { success: false, error: `Failed to get invoice: ${error.message}` };
+    }
+  }
+
+  /**
+   * Get a single invoice by DocNumber
+   */
+  async getInvoiceByDocNumber(session: QBOSession, docNumber: string): Promise<QBOOperationResult> {
+    try {
+      const query = `SELECT * FROM Invoice WHERE DocNumber = '${docNumber.replace(/'/g, "''")}'`;
+      const minorversion = 65;
+      const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${session.realmId}/query?query=${encodeURIComponent(query)}&minorversion=${minorversion}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.Fault) {
+        return {
+          success: false,
+          error: `QuickBooks API Error: ${JSON.stringify(data.Fault)}`
+        };
+      }
+
+      const invoice = (data.QueryResponse?.Invoice || [])[0] || null;
+      return { success: true, data: invoice, session };
+    } catch (error: any) {
+      return { success: false, error: `Failed to get invoice: ${error.message}` };
+    }
+  }
+
+  /**
    * Get customers for a session
    */
   async getCustomers(session: QBOSession, limit: number = 50, offset: number = 0): Promise<QBOOperationResult> {
@@ -260,6 +326,84 @@ export class QBOSessionManager {
         success: false,
         error: `Failed to get items: ${error.message}`
       };
+    }
+  }
+
+  /**
+   * Get a default income account to attach to created items
+   */
+  async getDefaultIncomeAccount(session: QBOSession): Promise<QBOOperationResult> {
+    try {
+      const query = `SELECT Id, Name, AccountType FROM Account WHERE AccountType = 'Income'`;
+      const minorversion = 65;
+      const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${session.realmId}/query?query=${encodeURIComponent(query)}&minorversion=${minorversion}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (data.Fault) {
+        return { success: false, error: `QuickBooks API Error: ${JSON.stringify(data.Fault)}` };
+      }
+      const acct = (data.QueryResponse?.Account || [])[0] || null;
+      return { success: true, data: acct, session };
+    } catch (error: any) {
+      return { success: false, error: `Failed to get income account: ${error.message}` };
+    }
+  }
+
+  /**
+   * Create a customer
+   */
+  async createCustomer(session: QBOSession, payload: any): Promise<QBOOperationResult> {
+    try {
+      const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${session.realmId}/customer?minorversion=65`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.Fault) {
+        return { success: false, error: `QuickBooks API Error: ${JSON.stringify(data.Fault)}` };
+      }
+      return { success: true, data: data.Customer, session };
+    } catch (error: any) {
+      return { success: false, error: `Failed to create customer: ${error.message}` };
+    }
+  }
+
+  /**
+   * Create an item (Service)
+   */
+  async createItem(session: QBOSession, payload: any): Promise<QBOOperationResult> {
+    try {
+      const url = `https://sandbox-quickbooks.api.intuit.com/v3/company/${session.realmId}/item?minorversion=65`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.Fault) {
+        return { success: false, error: `QuickBooks API Error: ${JSON.stringify(data.Fault)}` };
+      }
+      return { success: true, data: data.Item, session };
+    } catch (error: any) {
+      return { success: false, error: `Failed to create item: ${error.message}` };
     }
   }
 

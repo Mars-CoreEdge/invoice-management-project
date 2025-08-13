@@ -1,0 +1,41 @@
+{
+  "timestamp": "2025-08-13T17:53:23.943Z",
+  "baseUrl": "http://localhost:3000",
+  "results": [
+    {
+      "name": "Auth login",
+      "status": "PASS",
+      "details": "test@example.com"
+    },
+    {
+      "name": "Ensure team",
+      "status": "PASS",
+      "details": "4bb57615-ca12-4456-9f93-a117d3ce2329"
+    },
+    {
+      "name": "Internal - List invoices",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "name": "Internal - Create invoice",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "name": "Analytics - GET",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "name": "QBO - Status",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "QBO - Fetch primitives",
+      "status": "FAIL",
+      "details": "No customers/items (connect QBO sample data or use create helpers)"
+    }
+  ]
+}
