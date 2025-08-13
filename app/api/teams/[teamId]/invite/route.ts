@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
 import { getTeamService } from '@/lib/team-service'
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { teamId: string } }
 ) {
   try {

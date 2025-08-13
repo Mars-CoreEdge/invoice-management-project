@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getTeamService } from '@/lib/team-service';
 import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server';
 import { AcceptInvitationRequest } from '../../../../../types/teams';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const supabase = await createSupabaseForRequest(request as any)
     const { data: { user } } = await getAuthenticatedUser(request as any)

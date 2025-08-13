@@ -33,7 +33,7 @@ export function createServerSupabaseClient() {
  * Helper to retrieve the authenticated user from a request.
  * Falls back to cookie-based session, but also supports Bearer tokens via Authorization header.
  */
-export async function getAuthenticatedUser(request: NextRequest) {
+export async function getAuthenticatedUser(request: NextRequest | Request) {
   const supabase = createServerSupabaseClient()
   const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
   const bearer = authHeader?.startsWith('Bearer ')
@@ -54,7 +54,7 @@ export async function getAuthenticatedUser(request: NextRequest) {
  * the access/refresh tokens from either cookies or Authorization header
  * so subsequent queries run under the authenticated context (RLS).
  */
-export async function createSupabaseForRequest(request: NextRequest) {
+export async function createSupabaseForRequest(request: NextRequest | Request) {
   const supabase = createServerSupabaseClient()
   try {
     const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')

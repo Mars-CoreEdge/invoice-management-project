@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
 import { getTeamService } from '@/lib/team-service'
 
@@ -61,7 +61,7 @@ const mockInvoices = [
   }
 ]
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
     const supabase = await createSupabaseForRequest(request)
     
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const supabase = await createSupabaseForRequest(request)
     
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
   }
 } 
 
-export async function PUT(request: NextRequest) {
+export async function PUT(request: Request) {
   try {
     const supabase = await createSupabaseForRequest(request)
     const { data: { user } } = await getAuthenticatedUser(request)
@@ -233,7 +233,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(request: Request) {
   try {
     const supabase = await createSupabaseForRequest(request)
     const { data: { user } } = await getAuthenticatedUser(request)

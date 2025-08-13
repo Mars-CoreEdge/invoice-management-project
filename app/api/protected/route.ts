@@ -1,4 +1,4 @@
-import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
+import { createSupabaseForRequest, getAuthenticatedUser, createServerSupabaseClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {

@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getTeamService } from '../../../../../lib/team-service';
 import { createSupabaseForRequest, getAuthenticatedUser } from '../../../../../lib/supabase-server';
 import { InviteUserRequest } from '../../../../../types/teams';
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { teamId: string } }
 ) {
   try {
@@ -35,7 +35,7 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { teamId: string } }
 ) {
   try {

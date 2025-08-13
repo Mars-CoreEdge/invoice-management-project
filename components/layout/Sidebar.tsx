@@ -3,54 +3,56 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useTeam } from '@/components/TeamContext'
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Users, 
-  Bot, 
-  Settings,
-  BarChart3
-} from 'lucide-react'
+import * as Lucide from 'lucide-react'
+import React from 'react'
 
 export function Sidebar() {
   const pathname = usePathname()
   const { canManageTeam, canEditInvoices, canUseAITools } = useTeam()
 
+  const Icons: any = Lucide as any
+  const IconDashboard = Icons.LayoutDashboard || (() => <span>🏠</span>)
+  const IconInvoices = Icons.FileText || (() => <span>📄</span>)
+  const IconUsers = Icons.Users || (() => <span>👥</span>)
+  const IconBot = Icons.Bot || (() => <span>🤖</span>)
+  const IconSettings = Icons.Settings || (() => <span>⚙️</span>)
+  const AnalyticsIcon = Icons.BarChart3 || Icons.BarChart || Icons.AreaChart || Icons.TrendingUp || Icons.Activity || (() => <span>📊</span>)
+
   const navigationItems = [
     {
       name: 'Dashboard',
       href: '/dashboard',
-      icon: LayoutDashboard,
+      icon: IconDashboard,
       show: true
     },
     {
       name: 'Invoices',
       href: '/invoices',
-      icon: FileText,
+      icon: IconInvoices,
       show: true
     },
     {
       name: 'Analytics',
       href: '/analytics',
-      icon: BarChart3,
+      icon: AnalyticsIcon,
       show: true
     },
     {
       name: 'Teams',
       href: '/teams',
-      icon: Users,
+      icon: IconUsers,
       show: canManageTeam
     },
     {
       name: 'AI Assistant',
       href: '/assistant',
-      icon: Bot,
+      icon: IconBot,
       show: canUseAITools
     },
     {
       name: 'Settings',
       href: '/settings',
-      icon: Settings,
+      icon: IconSettings,
       show: true
     }
   ]

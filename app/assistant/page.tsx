@@ -4,7 +4,14 @@ import { useState, useRef, useEffect } from 'react'
 import { useTeam } from '@/components/TeamContext'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
-import { Bot, Send, User, Sparkles, FileText, DollarSign, Calendar } from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const Bot: any = (Lucide as any).Bot || (() => <span>🤖</span>)
+const Send: any = (Lucide as any).Send || (() => <span>➤</span>)
+const User: any = (Lucide as any).User || (() => <span>👤</span>)
+const Sparkles: any = (Lucide as any).Sparkles || (() => <span>✨</span>)
+const FileText: any = (Lucide as any).FileText || (() => <span>📄</span>)
+const DollarSign: any = (Lucide as any).DollarSign || (() => <span>$</span>)
+const Calendar: any = (Lucide as any).Calendar || (() => <span>📅</span>)
 
 interface Message {
   id: string
@@ -14,7 +21,9 @@ interface Message {
 }
 
 export default function AssistantPage() {
-  const { currentTeam, canUseAITools } = useTeam()
+  const teamCtx = useTeam() as any
+  const currentTeam = teamCtx?.currentTeam
+  const canUseAITools = teamCtx?.canUseAITools
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)

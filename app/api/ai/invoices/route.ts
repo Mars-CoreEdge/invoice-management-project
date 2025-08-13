@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
 import { getTeamService } from '@/lib/team-service'
 import { openai } from '@ai-sdk/openai'
@@ -58,12 +58,12 @@ const mockInvoices = [
   }
 ]
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const supabase = await createSupabaseForRequest(request as any)
+    const supabase = await createSupabaseForRequest(request)
     
     // Get current user (supports Bearer Authorization too)
-    const { data: { user }, error: authError } = await getAuthenticatedUser(request as any)
+    const { data: { user }, error: authError } = await getAuthenticatedUser(request)
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },

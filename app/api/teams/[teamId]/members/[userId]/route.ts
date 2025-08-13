@@ -1,14 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getTeamService } from '../../../../../../lib/team-service';
-import { getUserIdFromRequest } from '../../../../../../lib/utils';
+import { getAuthenticatedUser } from '../../../../../../lib/supabase-server';
 import { TeamRole } from '../../../../../../types/teams';
 
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { teamId: string; userId: string } }
 ) {
   try {
-    const currentUserId = await getUserIdFromRequest(request);
+    const { data: { user } } = await getAuthenticatedUser(request);
+    const currentUserId = user?.id;
     if (!currentUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -78,11 +79,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { teamId: string; userId: string } }
 ) {
   try {
-    const currentUserId = await getUserIdFromRequest(request);
+    const { data: { user } } = await getAuthenticatedUser(request);
+    const currentUserId = user?.id;
     if (!currentUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

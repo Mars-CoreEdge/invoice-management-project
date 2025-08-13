@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import sgMail from '@sendgrid/mail'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { email, role, teamId, token } = await (request as any).json()
     if (!email || !role || !teamId || !token) {

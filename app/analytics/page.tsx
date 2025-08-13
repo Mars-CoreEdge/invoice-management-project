@@ -3,16 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useTeam } from '@/components/TeamContext'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { 
-  BarChart3, 
-  DollarSign, 
-  TrendingUp, 
-  Calendar,
-  FileText,
-  Users,
-  ArrowUp,
-  ArrowDown
-} from 'lucide-react'
+import * as Lucide from 'lucide-react'
+const ArrowUpIcon: any = (Lucide as any).ArrowUp || (() => <span>↑</span>)
+const ArrowDownIcon: any = (Lucide as any).ArrowDown || (() => <span>↓</span>)
+const ChartIcon: any = (Lucide as any).BarChart3 || (Lucide as any).BarChart || (Lucide as any).AreaChart || ((props: any) => <div {...props} />)
 
 interface AnalyticsData {
   totalInvoices: number
@@ -34,7 +28,8 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
-  const { currentTeam } = useTeam()
+  const teamCtx = useTeam() as any
+  const currentTeam = teamCtx?.currentTeam
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('30d')
@@ -161,15 +156,20 @@ console.log(invoices)
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-white" />
+                {('DollarSign' in Lucide) ? (
+                  // @ts-ignore - dynamic
+                  <Lucide.DollarSign className="w-6 h-6 text-white" />
+                ) : (
+                  <div className="w-6 h-6" />
+                )}
               </div>
               <div className={`flex items-center gap-1 text-sm ${
                 analytics.monthlyGrowth >= 0 ? 'text-green-400' : 'text-red-400'
               }`}>
                 {analytics.monthlyGrowth >= 0 ? (
-                  <ArrowUp className="w-4 h-4" />
+                  <ArrowUpIcon className="w-4 h-4" />
                 ) : (
-                  <ArrowDown className="w-4 h-4" />
+                  <ArrowDownIcon className="w-4 h-4" />
                 )}
                 {Math.abs(analytics.monthlyGrowth)}%
               </div>
@@ -182,8 +182,13 @@ console.log(invoices)
 
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center">
-                <FileText className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center">
+                {('FileText' in Lucide) ? (
+                  // @ts-ignore
+                  <Lucide.FileText className="w-6 h-6 text-white" />
+                ) : (
+                  <div className="w-6 h-6" />
+                )}
               </div>
             </div>
             <div className="text-2xl font-bold text-white mb-1">
@@ -194,8 +199,13 @@ console.log(invoices)
 
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-emerald-600 to-green-600 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-r from-emerald-600 to-green-600 rounded-xl flex items-center justify-center">
+                {('TrendingUp' in Lucide) ? (
+                  // @ts-ignore
+                  <Lucide.TrendingUp className="w-6 h-6 text-white" />
+                ) : (
+                  <div className="w-6 h-6" />
+                )}
               </div>
             </div>
             <div className="text-2xl font-bold text-white mb-1">
@@ -206,8 +216,13 @@ console.log(invoices)
 
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl flex items-center justify-center">
+                {('Calendar' in Lucide) ? (
+                  // @ts-ignore
+                  <Lucide.Calendar className="w-6 h-6 text-white" />
+                ) : (
+                  <div className="w-6 h-6" />
+                )}
               </div>
             </div>
             <div className="text-2xl font-bold text-white mb-1">
@@ -286,7 +301,12 @@ console.log(invoices)
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4">
               <div className="flex items-center gap-3 mb-2">
-                <TrendingUp className="w-5 h-5 text-green-400" />
+                {('TrendingUp' in Lucide) ? (
+                  // @ts-ignore
+                  <Lucide.TrendingUp className="w-5 h-5 text-green-400" />
+                ) : (
+                  <div className="w-5 h-5" />
+                )}
                 <span className="text-white font-medium">Growth Trend</span>
               </div>
               <p className="text-purple-200 text-sm">
@@ -295,7 +315,12 @@ console.log(invoices)
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4">
               <div className="flex items-center gap-3 mb-2">
-                <Calendar className="w-5 h-5 text-red-400" />
+                {('Calendar' in Lucide) ? (
+                  // @ts-ignore
+                  <Lucide.Calendar className="w-5 h-5 text-red-400" />
+                ) : (
+                  <div className="w-5 h-5" />
+                )}
                 <span className="text-white font-medium">Collections</span>
               </div>
               <p className="text-purple-200 text-sm">
@@ -304,7 +329,12 @@ console.log(invoices)
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4">
               <div className="flex items-center gap-3 mb-2">
-                <Users className="w-5 h-5 text-blue-400" />
+                {('Users' in Lucide) ? (
+                  // @ts-ignore
+                  <Lucide.Users className="w-5 h-5 text-blue-400" />
+                ) : (
+                  <div className="w-5 h-5" />
+                )}
                 <span className="text-white font-medium">Customer Focus</span>
               </div>
               <p className="text-purple-200 text-sm">
@@ -313,7 +343,7 @@ console.log(invoices)
             </div>
             <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4">
               <div className="flex items-center gap-3 mb-2">
-                <BarChart3 className="w-5 h-5 text-purple-400" />
+                <ChartIcon className="w-5 h-5 text-purple-400" />
                 <span className="text-white font-medium">Performance</span>
               </div>
               <p className="text-purple-200 text-sm">

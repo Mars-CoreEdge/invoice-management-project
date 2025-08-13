@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
 import { getTeamService } from '@/lib/team-service'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
     const supabase = await createSupabaseForRequest(request as any)
     
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const supabase = await createSupabaseForRequest(request as any)
     

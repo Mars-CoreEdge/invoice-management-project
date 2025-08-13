@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createSupabaseForRequest, getAuthenticatedUser } from '@/lib/supabase-server'
 import { getTeamService } from '@/lib/team-service'
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { teamId: string } }
 ) {
   try {
@@ -63,7 +63,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { teamId: string } }
 ) {
   try {
@@ -120,7 +120,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { teamId: string } }
 ) {
   try {
